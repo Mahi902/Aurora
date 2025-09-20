@@ -1,1 +1,60 @@
+body {
+    font-family: sans-serif;
+    background-color: #f0f0f0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
 
+.editor-container {
+    width: 90%;
+    max-width: 1200px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    padding: 20px;
+}
+
+.video-player video {
+    width: 100%;
+    display: block;
+    background-color: #000;
+}
+
+.controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+#seek-bar, #volume-bar {
+    flex-grow: 1;
+}
+
+.timeline {
+    margin-top: 20px;
+    background-color: #eee;
+    padding: 10px;
+    border-radius: 4px;
+    overflow-x: auto;
+}
+
+.timeline-track {
+    display: flex;
+    gap: 5px;
+    height: 60px;
+    align-items: center;
+    white-space: nowrap;
+}
+
+.video-clip {
+    background-color: #3498db;
+    color: #fff;
+    padding: 10px;
+    border-radius: 4px;
+    min-width: 100px;
+    text-align: center;
+}
