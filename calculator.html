@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        /* Embed styles directly for simplicity */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh; /* Use 100vh to ensure it fills the iframe height */
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .calculator {
+            width: 300px;
+            background-color: #fff;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+        }
+
+        #display {
+            width: 100%;
+            height: 70px;
+            background-color: #1a1a1a;
+            color: #fff;
+            font-size: 2.5em;
+            text-align: right;
+            padding: 10px;
+            border: none;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        button {
+            height: 60px;
+            font-size: 1.5em;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+        }
+
+        /* Number and Decimal Buttons */
+        button:not(.operator):not(.clear):not(.equals) {
+            background-color: #e0e0e0;
+            color: #333;
+        }
+        button:not(.operator):not(.clear):not(.equals):hover {
+            background-color: #d1d1d1;
+        }
+
+        /* Operator Buttons */
+        .operator {
+            background-color: #ff9500;
+            color: #fff;
+        }
+        .operator:hover {
+            background-color: #e08500;
+        }
+
+        /* Clear Button (AC) */
+        .clear {
+            background-color: #ff3b30;
+            color: #fff;
+        }
+        .clear:hover {
+            background-color: #e0352b;
+        }
+
+        /* Equals Button */
+        .equals {
+            background-color: #4cd964;
+            color: #fff;
+            grid-column: span 2; /* Span two columns */
+        }
+        .equals:hover {
+            background-color: #40c055;
+        }
+    </style>
+</head>
+<body>
+
+<div class="calculator">
+    <div id="display">0</div>
+    <div class="buttons">
+        <button class="clear">AC</button>
+        <button class="operator" data-value="%">&percnt;</button>
+        <button class="operator" data-value="/">&divide;</button>
+        <button data-value="7">7</button>
+        <button data-value="8">8</button>
+        <button data-value="9">9</button>
+        <button class="operator" data-value="*">&times;</button>
+        <button data-value="4">4</button>
+        <button data-value="5">5</button>
+        <button data-value="6">6</button>
+        <button class="operator" data-value="-">&minus;</button>
+        <button data-value="1">1</button>
+        <button data-value="2">2</button>
+        <button data-value="3">3</button>
+        <button class="operator" data-value="+">&plus;</button>
+        <button data-value="0">0</button>
+        <button data-value=".">.</button>
+        <button class="equals" data-value="=">&equals;</button>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const display = document.getElementById('display');
+        const buttons = document.querySelectorAll('.buttons button');
+        let currentInput = '0';
+        let operator = null;
+        let previousInput = null;
+        let waitingForNewInput = false;
+
+        const calculate = (a, op, b) => {
+            a = parseFloat(a);
+            b = parseFloat(b);
+            if (isNaN(a) || isNaN(b)) return b;
+
+            switch (op) {
+                case '+': return a + b;
+                case '-': return a - b;
+                case '*': return a * b;
+                case '/': return a / b;
+                case '%': return a % b; // Simple modulo operation
+                default: return b;
+            }
+        };
+
+        const handleNumber = (value) => {
+            if (waitingForNewInput) {
+                currentInput = value;
+                waitingForNewInput = false;
+            } else {
+                currentInput = currentInput === '0' ? value : currentInput + value;
+            }
+            display.textContent = currentInput;
+        };
+
+        const handleDecimal = () => {
+            if (waitingForNewInput) {
+                currentInput = '0.';
+                waitingForNewInput = false;
+            } else if (!currentInput.includes('.')) {
+                currentInput += '.';
+            }
+            display.textContent = currentInput;
+        };
+
+        const handleOperator = (nextOperator) => {
+            const inputValue = parseFloat(currentInput);
+
+            if (previousInput === null) {
+                previousInput = inputValue;
+            } else if (!waitingForNewInput) {
+                const result = calculate(previousInput, operator, inputValue);
+                currentInput = String(result);
+                display.textContent = currentInput;
+                previousInput = result;
+            }
+
+            waitingForNewInput = true;
+            operator = nextOperator;
+        };
+
+        const handleEquals = () => {
+            if (previousInput === null || operator === null) return;
+            
+            // If the user hits = repeatedly, it should use the previous operand (b)
+            const inputValue = waitingForNewInput ? previousInput : parseFloat(currentInput);
+            const secondOperand = waitingForNewInput ? (previousInput / previousInput) : parseFloat(currentInput); 
+            
+            const result = calculate(previousInput, operator, secondOperand);
+            
+            currentInput = String(result);
+            display.textContent = currentInput;
+            previousInput = result;
+            waitingForNewInput = true;
+            operator = null; // Reset operator after equals
+        };
+        
+        const handleAC = () => {
+            currentInput = '0';
+            operator = null;
+            previousInput = null;
+            waitingForNewInput = false;
+            display.textContent = currentInput;
+        };
+
+
+        buttons.forEach(button => {
+            button.addEventListener('click', () => {
+                const value = button.getAttribute('data-value') || button.textContent.trim();
+                
+                if (button.classList.contains('clear')) {
+                    handleAC();
+                } else if (button.classList.contains('operator')) {
+                    handleOperator(value);
+                } else if (button.classList.contains('equals')) {
+                    // Reusing the calculation logic in a simpler way for equals
+                    if (operator && previousInput !== null) {
+                        const result = calculate(previousInput, operator, parseFloat(currentInput));
+                        currentInput = String(result);
+                        display.textContent = currentInput;
+                        previousInput = null;
+                        operator = null;
+                        waitingForNewInput = true;
+                    }
+                } else if (value === '.') {
+                    handleDecimal();
+                } else {
+                    handleNumber(value);
+                }
+            });
+        });
+
+        // Initialize the display
+        display.textContent = currentInput;
+    });
+</script>
+</body>
+</html>
