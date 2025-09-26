@@ -17,6 +17,8 @@
             --hover-background: rgba(255, 255, 255, 0.7);
             --border-color: rgba(200, 200, 200, 0.5);
             --shadow-color: rgba(0, 0, 0, 0.1);
+            --primary-color: #007aff;
+            --secondary-color: #e0e0e0;
         }
 
         * {
@@ -150,7 +152,7 @@
             transform: translateX(-50%);
             width: 6px;
             height: 6px;
-            background-color: #007aff;
+            background-color: var(--primary-color);
             border-radius: 50%;
         }
 
@@ -197,7 +199,7 @@
             font-weight: 600;
         }
         #appSearch { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background-color: rgba(255, 255, 255, 0.8); font-size: 16px; margin-bottom: 15px; }
-        #appSearch:focus { outline: none; border-color: #007aff; box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.3); }
+        #appSearch:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.3); }
         #appGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 15px; overflow-y: auto; padding-right: 5px; }
         .app-icon { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 10px; border-radius: 8px; cursor: grab; transition: background-color 0.2s ease; text-decoration: none; color: var(--text-color); }
         .app-icon:hover { background-color: var(--hover-background); }
@@ -290,7 +292,7 @@
             padding: 8px 12px;
             border: none;
             border-radius: 8px;
-            background-color: #007aff;
+            background-color: var(--primary-color);
             color: white;
             cursor: pointer;
             transition: background-color 0.2s ease;
@@ -341,7 +343,7 @@
             padding: 10px 15px;
             border: none;
             border-radius: 8px;
-            background-color: #007aff;
+            background-color: var(--primary-color);
             color: white;
             cursor: pointer;
             transition: background-color 0.2s ease;
@@ -350,8 +352,8 @@
             background-color: #005bb5;
         }
         .setting-card button.secondary {
-            background-color: #e0e0e0;
-            color: #1a1a1a;
+            background-color: var(--secondary-color);
+            color: var(--text-color);
         }
 
         #messageBox {
@@ -374,7 +376,7 @@
             margin-bottom: 10px;
         }
         #messageBox button {
-            background-color: #007aff;
+            background-color: var(--primary-color);
             color: white;
             border: none;
             padding: 10px 20px;
@@ -415,84 +417,105 @@
             color: #555;
         }
         
-        /* --- New UI for Login/Welcome Screens --- */
+        /* --- New UI for Login/Welcome Screens (Updated) --- */
         .overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
-            background-color: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(20px);
             display: flex;
             justify-content: center;
             align-items: center;
             z-index: 30000;
         }
+        
+        /* Blur background for login screens */
+        .blur-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center center;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            z-index: -1;
+        }
+        
         .modal {
             background: rgba(255, 255, 255, 0.8);
             backdrop-filter: blur(15px);
             border-radius: 20px;
             border: 1px solid var(--border-color);
-            padding: 40px;
-            max-width: 500px;
+            padding: 30px;
+            max-width: 400px;
             text-align: center;
             box-shadow: 0 10px 40px var(--shadow-color);
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 15px;
         }
         .modal h2 {
-            font-size: 2rem;
+            font-size: 1.5rem;
             font-weight: 600;
+            margin-bottom: 0;
         }
         .modal p {
-            font-size: 1.2rem;
-            font-weight: 500;
+            font-size: 1rem;
+            font-weight: 400;
             color: #555;
         }
         .modal .input-group {
             display: flex;
             flex-direction: column;
             gap: 10px;
+            margin-top: 5px;
         }
         .modal input {
             padding: 12px;
-            border-radius: 10px;
+            border-radius: 8px;
             border: 1px solid var(--border-color);
             background-color: rgba(255, 255, 255, 0.9);
             font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+        .modal input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
         }
         .modal button {
-            padding: 15px 25px;
-            border-radius: 12px;
+            padding: 12px 20px;
+            border-radius: 8px;
             border: none;
             cursor: pointer;
-            font-size: 1.1rem;
+            font-size: 1rem;
             font-weight: 600;
             transition: background-color 0.2s ease, transform 0.2s ease;
         }
         .modal button:hover {
-            transform: translateY(-2px);
+            transform: translateY(-1px);
         }
-        #createPasswordBtn, #loginBtn {
-            background-color: #007aff;
+        #createPasswordBtn, #loginBtn, #savePasswordBtn, #saveNoPasswordBtn, #submitResetBtn {
+            background-color: var(--primary-color);
             color: white;
         }
         #continueWithoutBtn, #resetPasswordBtn {
-            background-color: #e0e0e0;
-            color: #1a1a1a;
+            background-color: var(--secondary-color);
+            color: var(--text-color);
         }
         .profile-pic-container {
             display: flex;
-            justify-content: center;
-            align-items: center;
             flex-direction: column;
+            align-items: center;
             gap: 10px;
+            margin-bottom: 0;
         }
-        #pfpPreview {
-            width: 100px;
-            height: 100px;
+        #pfpPreview, #pfpPreviewNoPass, #loginPfp {
+            width: 80px;
+            height: 80px;
             border-radius: 50%;
             border: 2px solid var(--border-color);
             object-fit: cover;
@@ -555,7 +578,7 @@
     <!-- Login/Welcome Screens -->
     <div id="welcomeScreen" class="overlay">
         <div class="modal">
-            <h2>Hello User</h2>
+            <h2>Welcome</h2>
             <p>Welcome to Aurora Launcher!</p>
             <button id="createPasswordBtn">Create Password</button>
             <button id="continueWithoutBtn">Continue Without</button>
@@ -563,41 +586,44 @@
     </div>
     
     <div id="passwordSetupScreen" class="overlay" style="display:none;">
+        <div class="blur-overlay"></div>
         <div class="modal">
             <h2>Create Your Profile</h2>
+            <div class="profile-pic-container">
+                <img id="pfpPreview" src="https://placehold.co/80x80?text=PFP" alt="Profile Picture">
+                <input type="url" id="pfpInput" placeholder="PFP URL">
+            </div>
             <div class="input-group">
-                <div class="profile-pic-container">
-                    <img id="pfpPreview" src="https://placehold.co/100x100?text=PFP" alt="Profile Picture">
-                    <input type="url" id="pfpInput" placeholder="Enter PFP URL">
-                </div>
-                <input type="text" id="nameInput" placeholder="Enter your name">
-                <input type="password" id="passwordInput" placeholder="Enter new password">
-                <input type="password" id="confirmPasswordInput" placeholder="Confirm new password">
-                <input type="text" id="recoveryQuestion" placeholder="Enter a recovery question">
-                <input type="text" id="recoveryAnswer" placeholder="Enter the answer">
+                <input type="text" id="nameInput" placeholder="Name">
+                <input type="password" id="passwordInput" placeholder="Password">
+                <input type="password" id="confirmPasswordInput" placeholder="Confirm Password">
+                <input type="text" id="recoveryQuestion" placeholder="Recovery Question">
+                <input type="text" id="recoveryAnswer" placeholder="Recovery Answer">
             </div>
             <button id="savePasswordBtn">Save & Continue</button>
         </div>
     </div>
     
     <div id="continueWithoutScreen" class="overlay" style="display:none;">
+        <div class="blur-overlay"></div>
         <div class="modal">
             <h2>Set Up Your Profile</h2>
+            <div class="profile-pic-container">
+                <img id="pfpPreviewNoPass" src="https://placehold.co/80x80?text=PFP" alt="Profile Picture">
+                <input type="url" id="pfpInputNoPass" placeholder="PFP URL">
+            </div>
             <div class="input-group">
-                <div class="profile-pic-container">
-                    <img id="pfpPreviewNoPass" src="https://placehold.co/100x100?text=PFP" alt="Profile Picture">
-                    <input type="url" id="pfpInputNoPass" placeholder="Enter PFP URL">
-                </div>
-                <input type="text" id="nameInputNoPass" placeholder="Enter your name">
+                <input type="text" id="nameInputNoPass" placeholder="Name">
             </div>
             <button id="saveNoPasswordBtn">Save & Continue</button>
         </div>
     </div>
     
     <div id="loginScreen" class="overlay" style="display:none;">
+        <div class="blur-overlay"></div>
         <div class="modal">
             <div class="profile-pic-container">
-                <img id="loginPfp" src="https://placehold.co/100x100" alt="Profile Picture">
+                <img id="loginPfp" src="https://placehold.co/80x80" alt="Profile Picture">
             </div>
             <h2 id="loginWelcomeText"></h2>
             <div class="input-group">
@@ -609,8 +635,9 @@
     </div>
 
     <div id="resetScreen" class="overlay" style="display:none;">
+        <div class="blur-overlay"></div>
         <div class="modal">
-            <h2>Reset Password</h2>
+            <h2>Password Reset</h2>
             <p id="resetQuestionText"></p>
             <div class="input-group">
                 <input type="text" id="resetAnswerInput" placeholder="Your answer">
@@ -621,12 +648,13 @@
     </div>
     
     <div id="loadingScreen" class="overlay" style="display:none;">
+        <div class="blur-overlay"></div>
         <div class="modal">
             <h2 id="loadingText"></h2>
             <div class="loader"></div>
         </div>
     </div>
-    <audio id="chimeSound" src="data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAAAAAAAPUxhdmY1OC40NS4xMDAAAAAAAAAAAAAAAEluZm8AAAAPAAAADwAAACQABAAJAEQASABMAFEAUQBMAEMAUgBTAE0AawAAAA9MYXZjNTguOTEuMTAwAAAAAAP/eAEAAAAAAAAAAAGIYXNlAAAABAAAAAQAAAAAAAAAAABQY006AAAAAA/4oCAAAAAAAAAAAAAAAABAAAASAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB0ZXh0BgAAAAAAdXNlcmlkZW50AAAAAAA/4oCAAAAAAAAAAAAAAAABAAAASAAAAAAAAAD/eAHAAAAAAAAAAABGbWFyY29kZXIACgAAAAEAAAAACAAAMDAwMwAAAAAAAAAAACgAAAAjAAAAFwAQAAEAAAAGXAAAABAAAAAAACQAAAEAAAABAAAGc0FjAAAAAEwAAAAAAAAAASAAAA8AAABkAAABgAAAAAAAAAAAAAAAAAAAAAAAAAAAP+4AUk0ZWcAAAAAAAAAACkAAAAEAAAASAAAAAAAAAGZkZGQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" preload="auto"></audio>
+    <audio id="chimeSound" src="data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAAAAAAAPUxhdmY1OC40NS4xMDAAAAAAAAAAAAAAAEluZm8AAAAPAAAADwAAACQABAAJAEQASABMAFEAUQBMAEMAUgBTAE0AawAAAA9MYXZjNTguOTEuMTAwAAAAAAP/eAEAAAAAAAAAAAGIYXNlAAAABAAAAAQAAAAAAAAAAABQY006AAAAAA/4oCAAAAAAAAAAAAAAAABAAAASAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB0ZXh0BgAAAAAAdXNlcmlkZW50AAAAAAA/4oCAAAAAAAAAAAAAAAABAAAASAAAAAAAAAD/eAHAAAAAAAAAAABGbWFyY29kZXIACgAAAAEAAAAACAAAMDAwMwAAAAAAAAAAACgAAAAjAAAAFwAQAAEAAAAGXAAAABAAAAAAACQAAAEAAAABAAAGc0FjAAAAAEwAAAAAAAAAASAAAA8AAABkAAABgAAAAAAAAAAAAAAAAAAAAAAAAAAAP+4AUk0ZWcAAAAAAAAAACkAAAAEAAAASAAAAAAAAAGZkZGQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" preload="auto"></audio>
 
     <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -647,6 +675,7 @@
         const messageBoxText = document.getElementById('messageBoxText');
         const messageBoxOk = document.getElementById('messageBoxOk');
         const chimeSound = document.getElementById('chimeSound');
+        const blurOverlays = document.querySelectorAll('.blur-overlay');
 
         // New UI Elements
         const welcomeScreen = document.getElementById('welcomeScreen');
@@ -706,6 +735,11 @@
         function showScreen(screen) {
             document.querySelectorAll('.overlay').forEach(s => s.style.display = 'none');
             screen.style.display = 'flex';
+            // Apply blurred wallpaper to relevant screens
+            if (screen.id === 'passwordSetupScreen' || screen.id === 'continueWithoutScreen' || screen.id === 'loginScreen' || screen.id === 'resetScreen' || screen.id === 'loadingScreen') {
+                const wallpaperStyle = desktop.style.backgroundImage;
+                blurOverlays.forEach(overlay => overlay.style.backgroundImage = wallpaperStyle);
+            }
         }
         
         function showMessageBox(title, message) {
@@ -727,7 +761,7 @@
                 showScreen(welcomeScreen);
             } else if (user && user.password) {
                 showScreen(loginScreen);
-                loginPfp.src = user.pfp || 'https://placehold.co/100x100?text=PFP';
+                loginPfp.src = user.pfp || 'https://placehold.co/80x80?text=PFP';
                 loginWelcomeText.textContent = `Welcome ${user.name}`;
             } else {
                 showLoadingDesktop(user);
@@ -765,34 +799,17 @@
             window.addEventListener('resize', setWallpaper);
         }
 
-        function generateBlobWallpaper() {
-            const ctx = desktopCanvas.getContext('2d');
-            desktopCanvas.width = window.innerWidth;
-            desktopCanvas.height = window.innerHeight;
-            const baseColors = [
-                '#B0D4FF', '#A3F5E7', '#C4F6E5', '#D2F0FB', '#C6E8F6',
-                '#BBE4E9', '#D9E0EF', '#F5E4E3', '#F9E5D9', '#E6C6D6',
-                '#F3E1F5', '#E1EBF5', '#D9E5F9', '#F9F1E2', '#E7F5E1'
+        // Updated function to generate a random gradient wallpaper
+        function generateGradientWallpaper() {
+            const lightColors = [
+                '#a8e063', '#56ab2f', '#f7f070', '#e0c340', '#d3e2f5', '#b3d1f3',
+                '#e89589', '#d76d77', '#c0b4f0', '#958ad3', '#89e8e8', '#6de1d7',
+                '#f5e3a8', '#f3d6b3', '#a8e5a1', '#85d978'
             ];
-            ctx.fillStyle = '#f0f4f9';
-            ctx.fillRect(0, 0, desktopCanvas.width, desktopCanvas.height);
-            const numBlobs = Math.floor(Math.random() * 5) + 3;
-            for (let i = 0; i < numBlobs; i++) {
-                const color = baseColors[Math.floor(Math.random() * baseColors.length)];
-                const x = Math.random() * desktopCanvas.width;
-                const y = Math.random() * desktopCanvas.height;
-                const radius = Math.random() * 150 + 150;
-                const blur = Math.random() * 100 + 100;
-                const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
-                gradient.addColorStop(0, color + 'e6');
-                gradient.addColorStop(1, color + '00');
-                ctx.globalAlpha = 0.8;
-                ctx.filter = `blur(${blur}px)`;
-                ctx.fillStyle = gradient;
-                ctx.beginPath();
-                ctx.arc(x, y, radius, 0, Math.PI * 2);
-                ctx.fill();
-            }
+            const color1 = lightColors[Math.floor(Math.random() * lightColors.length)];
+            const color2 = lightColors[Math.floor(Math.random() * lightColors.length)];
+            desktopCanvas.style.display = 'none';
+            desktop.style.backgroundImage = `linear-gradient(135deg, ${color1} 0%, ${color2} 100%)`;
         }
 
         function setWallpaper() {
@@ -800,9 +817,7 @@
                 desktopCanvas.style.display = 'none';
                 desktop.style.backgroundImage = `url('${customWallpaper}')`;
             } else {
-                desktopCanvas.style.display = 'block';
-                desktop.style.backgroundImage = 'none';
-                generateBlobWallpaper();
+                generateGradientWallpaper();
             }
         }
 
@@ -1279,6 +1294,7 @@
         
         document.addEventListener('dragend', (e) => {
             const appId = e.dataTransfer.getData('text/plain');
+            
             const sourceIsHomeScreenApp = e.target.closest('.home-screen-app');
             if (sourceIsHomeScreenApp) {
                 const droppedOnDesktop = e.clientX > 0 && e.clientX < window.innerWidth && e.clientY > 0 && e.clientY < window.innerHeight;
@@ -1303,10 +1319,10 @@
         });
 
         pfpInput.addEventListener('input', () => {
-            pfpPreview.src = pfpInput.value || 'https://placehold.co/100x100?text=PFP';
+            pfpPreview.src = pfpInput.value || 'https://placehold.co/80x80?text=PFP';
         });
         pfpInputNoPass.addEventListener('input', () => {
-            pfpPreviewNoPass.src = pfpInputNoPass.value || 'https://placehold.co/100x100?text=PFP';
+            pfpPreviewNoPass.src = pfpInputNoPass.value || 'https://placehold.co/80x80?text=PFP';
         });
 
         savePasswordBtn.addEventListener('click', () => {
