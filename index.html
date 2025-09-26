@@ -463,7 +463,11 @@
                         url = 'https://' + url;
                     }
                     
+                    // Update the iframe source
                     browserFrame.src = url;
+
+                    // Update the url input value to the full URL for consistency
+                    urlInput.value = url;
                 };
 
                 goBtn.addEventListener('click', loadUrl);
@@ -472,6 +476,33 @@
                         loadUrl();
                     }
                 });
+
+                // Set a default, working URL
+                browserFrame.src = 'https://placehold.co/800x600/1e293b/d4d4d4?text=Welcome!';
+
+                // Add event listener to update the input field when the iframe navigates
+                browserFrame.onload = () => {
+                    try {
+                        // This can throw a security error for cross-origin iframes
+                        const newUrl = browserFrame.contentWindow.location.href;
+                        urlInput.value = newUrl;
+                    } catch (e) {
+                        // The `e` variable contains the security error if the iframe is blocked
+                        // The input field will not be updated for blocked pages, but this is expected behavior
+                        console.error("Could not access iframe location due to cross-origin security policy.");
+                        // Inform the user with a message box instead of alert()
+                        // This is a simple visual indication that something is wrong.
+                        const frameDocument = browserFrame.contentDocument || browserFrame.contentWindow.document;
+                        if (frameDocument) {
+                            frameDocument.body.innerHTML = `
+                                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; color: #666; font-family: 'Inter', sans-serif;">
+                                    <h1 style="font-size: 2rem;">Blocked!</h1>
+                                    <p style="font-size: 1rem; max-width: 80%; margin-top: 10px;">This website's security settings prevent it from being displayed in a frame. This is a common security feature on sites like Google and Facebook.</p>
+                                </div>
+                            `;
+                        }
+                    }
+                };
             }
         }
         
