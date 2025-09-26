@@ -49,6 +49,7 @@
             left: 0;
             width: 100%;
             height: calc(100% - 50px); /* Avoids overlap with bottom bar */
+            pointer-events: none; /* Let clicks pass through to desktop unless on a window */
         }
 
         /* --- 3. Bottom Bar (Taskbar) --- */
@@ -66,7 +67,7 @@
             justify-content: space-between;
             align-items: center;
             padding: 0 15px;
-            z-index: 1000;
+            z-index: 10000;
         }
 
         #menuButton {
@@ -79,101 +80,72 @@
             border-radius: 8px;
             transition: background-color 0.2s ease;
         }
+        #menuButton:hover { background-color: var(--hover-background); }
 
-        #menuButton:hover {
-            background-color: var(--hover-background);
+        #runningApps {
+            display: flex;
+            height: 100%;
+            align-items: center;
+            gap: 5px;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        .taskbar-icon {
+            background: none;
+            border: none;
+            padding: 5px 10px;
+            font-size: 22px;
+            height: 40px;
+            border-radius: 8px;
+            cursor: pointer;
+            position: relative;
+            transition: background-color 0.2s ease;
+        }
+        .taskbar-icon:hover { background-color: var(--hover-background); }
+        .taskbar-icon.active::after {
+            content: '';
+            position: absolute;
+            bottom: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 6px;
+            height: 6px;
+            background-color: #007aff;
+            border-radius: 50%;
         }
 
-        #systemTray {
-            font-size: 14px;
-            font-weight: 500;
-        }
+        #systemTray { font-size: 14px; font-weight: 500; }
 
         /* --- 4. App Menu --- */
         #appMenu {
             position: fixed;
-            bottom: 60px; /* 50px bar height + 10px margin */
+            bottom: 60px;
             left: 15px;
             width: 400px;
             max-height: 500px;
             background: var(--bar-background);
             backdrop-filter: blur(var(--bar-blur));
-            -webkit-backdrop-filter: blur(var(--bar-blur));
             border-radius: 12px;
             border: 1px solid var(--border-color);
             box-shadow: 0 8px 30px var(--shadow-color);
             padding: 15px;
-            z-index: 999;
+            z-index: 9999;
             display: flex;
             flex-direction: column;
-            
-            /* Initial state for animation */
             opacity: 0;
             transform: translateY(20px);
             visibility: hidden;
             transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
         }
-
-        #appMenu.visible {
-            opacity: 1;
-            transform: translateY(0);
-            visibility: visible;
-        }
-
-        #appSearch {
-            width: 100%;
-            padding: 12px;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-            background-color: rgba(255, 255, 255, 0.8);
-            font-size: 16px;
-            margin-bottom: 15px;
-        }
-        #appSearch:focus {
-            outline: none;
-            border-color: #007aff;
-            box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.3);
-        }
-
-        #appGrid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-            gap: 15px;
-            overflow-y: auto;
-            padding-right: 5px; /* for scrollbar */
-        }
-        
-        .app-icon {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            padding: 10px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-            text-decoration: none;
-            color: var(--text-color);
-        }
-        
-        .app-icon:hover {
-            background-color: var(--hover-background);
-        }
-        
-        .app-icon i {
-            font-size: 32px;
-            margin-bottom: 8px;
-        }
-        
-        .app-icon span {
-            font-size: 13px;
-            font-weight: 500;
-            /* Prevent text wrapping */
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            width: 100%;
-        }
+        #appMenu.visible { opacity: 1; transform: translateY(0); visibility: visible; }
+        #appSearch { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background-color: rgba(255, 255, 255, 0.8); font-size: 16px; margin-bottom: 15px; }
+        #appSearch:focus { outline: none; border-color: #007aff; box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.3); }
+        #appGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 15px; overflow-y: auto; padding-right: 5px; }
+        .app-icon { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 10px; border-radius: 8px; cursor: pointer; transition: background-color 0.2s ease; text-decoration: none; color: var(--text-color); }
+        .app-icon:hover { background-color: var(--hover-background); }
+        .app-icon i { font-size: 32px; margin-bottom: 8px; }
+        .app-icon span { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
 
         /* --- 5. App Windows --- */
         .app-window {
@@ -191,87 +163,78 @@
             overflow: auto;
             min-width: 250px;
             min-height: 150px;
+            pointer-events: auto; /* Re-enable pointer events for windows */
+            transition: opacity 0.2s, transform 0.2s;
         }
+        .app-window.minimized {
+            opacity: 0;
+            transform: scale(0.8);
+            pointer-events: none;
+        }
+        .app-window.maximized {
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            border-radius: 0;
+            resize: none;
+            transition: none; /* Disable transition for instant maximize */
+        }
+        .window-header { width: 100%; height: 35px; background-color: rgba(230, 230, 230, 0.7); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; padding: 0 10px; cursor: move; border-top-left-radius: 12px; border-top-right-radius: 12px; flex-shrink: 0; }
+        .window-title { font-weight: 600; font-size: 14px; }
+        .window-controls { display: flex; align-items: center; }
+        .window-controls button { background: none; border: none; font-size: 14px; width: 28px; height: 28px; line-height: 28px; border-radius: 50%; cursor: pointer; color: var(--text-color); opacity: 0.7; }
+        .window-controls button:hover { background-color: rgba(0, 0, 0, 0.1); opacity: 1;}
+        .window-body { flex-grow: 1; padding: 20px; overflow-y: auto; }
+        .settings-content h3 { margin-bottom: 15px; }
+        .settings-content .option { margin-bottom: 10px; }
+        .settings-content input[type="text"] { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); }
+        .settings-content button { padding: 8px 15px; border-radius: 6px; border: none; background-color: #007aff; color: white; cursor: pointer; margin-top: 5px; }
 
-        .window-header {
-            width: 100%;
-            height: 35px;
-            background-color: rgba(230, 230, 230, 0.7);
-            border-bottom: 1px solid var(--border-color);
+        /* --- 6. Custom Context Menu --- */
+        #contextMenu {
+            position: fixed;
+            background: var(--bar-background);
+            backdrop-filter: blur(var(--bar-blur));
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 8px 30px var(--shadow-color);
+            padding: 8px 0;
+            z-index: 10001;
+            display: none; /* Hidden by default */
+            list-style: none;
+        }
+        .context-menu-item {
+            padding: 10px 15px;
+            cursor: pointer;
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            padding: 0 10px;
-            cursor: move; /* Indicates the header is for dragging */
-            border-top-left-radius: 12px;
-            border-top-right-radius: 12px;
-        }
-        
-        .window-title {
-            font-weight: 600;
+            gap: 10px;
             font-size: 14px;
+            font-weight: 500;
+            transition: background-color 0.2s ease;
         }
-        
-        .window-controls button {
-            background: none;
-            border: none;
-            font-size: 12px;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            margin-left: 5px;
-            cursor: pointer;
+        .context-menu-item:hover {
+            background-color: var(--hover-background);
         }
-        .window-controls .close { background-color: #ff5f56; }
-        .window-controls .minimize { background-color: #ffbd2e; }
-        .window-controls .maximize { background-color: #27c93f; }
-        
-        .window-body {
-            flex-grow: 1;
-            padding: 20px;
-            overflow-y: auto;
+        .context-menu-item i {
+            width: 20px; /* Aligns icons */
+            text-align: center;
+            color: #555;
         }
-        
-        /* Specific App Window Content Example */
-        .settings-content h3 {
-             margin-bottom: 15px;
-        }
-        .settings-content .option {
-            margin-bottom: 10px;
-        }
-        .settings-content input[type="text"] {
-            width: 100%;
-            padding: 8px;
-            border-radius: 6px;
-            border: 1px solid var(--border-color);
-        }
-        .settings-content button {
-            padding: 8px 15px;
-            border-radius: 6px;
-            border: none;
-            background-color: #007aff;
-            color: white;
-            cursor: pointer;
-            margin-top: 5px;
-        }
-
     </style>
 </head>
 <body>
 
     <div id="desktop">
-        <div id="window-container">
-             </div>
+        <div id="window-container"></div>
     </div>
 
     <div id="bottomBar">
         <div id="menuButtonContainer">
-            <button id="menuButton" title="Open Menu">
-                <i class="fa-solid fa-cloud"></i>
-            </button>
+            <button id="menuButton" title="Open Menu"><i class="fa-solid fa-cloud"></i></button>
         </div>
-        <div id="runningApps">
-            </div>
+        <div id="runningApps"></div>
         <div id="systemTray">
             <div id="clock"></div>
         </div>
@@ -279,14 +242,18 @@
 
     <div id="appMenu">
         <input type="search" id="appSearch" placeholder="Search for apps...">
-        <div id="appGrid">
-            </div>
+        <div id="appGrid"></div>
     </div>
+    
+    <!-- New context menu HTML -->
+    <ul id="contextMenu">
+        <li class="context-menu-item" data-action="change-wallpaper"><i class="fa-solid fa-image"></i>Change Wallpaper</li>
+        <li class="context-menu-item" data-action="open-settings"><i class="fa-solid fa-gears"></i>Open Settings</li>
+    </ul>
 
     <script>
     document.addEventListener('DOMContentLoaded', () => {
 
-        // --- 1. State & Constants ---
         const desktop = document.getElementById('desktop');
         const clockElement = document.getElementById('clock');
         const menuButton = document.getElementById('menuButton');
@@ -294,6 +261,8 @@
         const appGrid = document.getElementById('appGrid');
         const appSearch = document.getElementById('appSearch');
         const windowContainer = document.getElementById('window-container');
+        const runningAppsContainer = document.getElementById('runningApps');
+        const contextMenu = document.getElementById('contextMenu');
 
         const APPS = [
             { id: 'browser', name: 'Browser', icon: 'fa-solid fa-globe', color: '#3498db' },
@@ -306,57 +275,35 @@
             { id: 'photos', name: 'Photos', icon: 'fa-solid fa-image', color: '#9b59b6' },
         ];
 
-        let openWindows = {}; // Keep track of open windows
+        let zIndexCounter = 100;
 
-        // --- 2. Core Functions ---
-
-        /**
-         * Sets a random, light-themed wallpaper from Unsplash.
-         */
         function setWallpaper() {
             const keywords = ['light', 'minimal', 'abstract', 'gradient', 'nature', 'sky'];
             const randomKeyword = keywords[Math.floor(Math.random() * keywords.length)];
-            const url = `https://source.unsplash.com/1920x1080/?${randomKeyword}`;
-            desktop.style.backgroundImage = `url(${url})`;
+            desktop.style.backgroundImage = `url(https://source.unsplash.com/1920x1080/?${randomKeyword})`;
         }
 
-        /**
-         * Updates the clock every second.
-         */
         function updateClock() {
-            const now = new Date();
-            const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            clockElement.textContent = time;
+            clockElement.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         }
 
-        /**
-         * Renders the app icons in the menu grid.
-         * @param {Array} appsToRender - The array of app objects to display.
-         */
         function renderApps(appsToRender = APPS) {
-            appGrid.innerHTML = ''; // Clear existing icons
+            appGrid.innerHTML = '';
             appsToRender.forEach(app => {
                 const appIcon = document.createElement('a');
                 appIcon.href = '#';
                 appIcon.className = 'app-icon';
                 appIcon.dataset.appId = app.id;
-                appIcon.innerHTML = `
-                    <i class="${app.icon}" style="color: ${app.color};"></i>
-                    <span>${app.name}</span>
-                `;
+                appIcon.innerHTML = `<i class="${app.icon}" style="color: ${app.color};"></i><span>${app.name}</span>`;
                 appIcon.addEventListener('click', (e) => {
                     e.preventDefault();
                     launchApp(app.id);
-                    toggleMenu(false); // Close menu on app launch
+                    toggleMenu(false);
                 });
                 appGrid.appendChild(appIcon);
             });
         }
         
-        /**
-         * Toggles the visibility of the app menu.
-         * @param {boolean} [forceState] - Optional: true to show, false to hide.
-         */
         function toggleMenu(forceState) {
             const isVisible = appMenu.classList.contains('visible');
             if (forceState === true || (!isVisible && forceState !== false)) {
@@ -366,55 +313,97 @@
             }
         }
 
-        /**
-         * Launches an app, creating a new window on the desktop.
-         * @param {string} appId - The ID of the app to launch.
-         */
+        function focusWindow(appWindow) {
+            // Un-minimize if necessary
+            appWindow.classList.remove('minimized');
+            
+            // Bring to front
+            appWindow.style.zIndex = ++zIndexCounter;
+
+            // Update active state on taskbar
+            document.querySelectorAll('.taskbar-icon').forEach(icon => icon.classList.remove('active'));
+            document.getElementById(`taskbar-icon-${appWindow.dataset.appId}`).classList.add('active');
+        }
+
         function launchApp(appId) {
-            if (openWindows[appId]) {
-                 // Optional: Bring existing window to front
-                 openWindows[appId].style.zIndex = getHighestZIndex() + 1;
-                 return;
+            const existingWindow = document.getElementById(`window-${appId}`);
+            if (existingWindow) {
+                focusWindow(existingWindow);
+                return;
             }
 
             const appData = APPS.find(app => app.id === appId);
             if (!appData) return;
 
             const appWindow = document.createElement('div');
+            appWindow.id = `window-${appId}`;
+            appWindow.dataset.appId = appId;
             appWindow.className = 'app-window';
             appWindow.style.left = `${Math.random() * 200 + 50}px`;
             appWindow.style.top = `${Math.random() * 100 + 50}px`;
-            appWindow.style.zIndex = getHighestZIndex() + 1;
-
+            
             appWindow.innerHTML = `
                 <div class="window-header">
                     <span class="window-title"><i class="${appData.icon}"></i> ${appData.name}</span>
                     <div class="window-controls">
-                        <button class="minimize" title="Minimize"></button>
-                        <button class="maximize" title="Maximize"></button>
-                        <button class="close" title="Close"></button>
+                        <button class="minimize-btn" title="Minimize"><i class="fa-regular fa-window-minimize"></i></button>
+                        <button class="maximize-btn" title="Maximize"><i class="fa-regular fa-square"></i></button>
+                        <button class="close-btn" title="Close"><i class="fa-solid fa-xmark"></i></button>
                     </div>
                 </div>
-                <div class="window-body">
-                    ${getAppContent(appId)}
-                </div>
+                <div class="window-body">${getAppContent(appId)}</div>
             `;
             
             windowContainer.appendChild(appWindow);
-            openWindows[appId] = appWindow;
 
-            // Add event listeners for window controls and dragging
+            // --- Window Controls Logic ---
             const header = appWindow.querySelector('.window-header');
-            const closeBtn = appWindow.querySelector('.close');
-            
+            const minimizeBtn = appWindow.querySelector('.minimize-btn');
+            const maximizeBtn = appWindow.querySelector('.maximize-btn');
+            const closeBtn = appWindow.querySelector('.close-btn');
+
+            // CLOSE
             closeBtn.addEventListener('click', () => {
                 appWindow.remove();
-                delete openWindows[appId];
+                document.getElementById(`taskbar-icon-${appId}`).remove();
+            });
+
+            // MINIMIZE
+            minimizeBtn.addEventListener('click', () => {
+                appWindow.classList.add('minimized');
+                document.getElementById(`taskbar-icon-${appId}`).classList.remove('active');
+            });
+
+            // MAXIMIZE / RESTORE
+            maximizeBtn.addEventListener('click', () => {
+                if (appWindow.classList.contains('maximized')) {
+                    // Restore
+                    appWindow.classList.remove('maximized');
+                    appWindow.style.top = appWindow.dataset.oldTop;
+                    appWindow.style.left = appWindow.dataset.oldLeft;
+                    appWindow.style.width = appWindow.dataset.oldWidth;
+                    appWindow.style.height = appWindow.dataset.oldHeight;
+                    maximizeBtn.innerHTML = `<i class="fa-regular fa-square"></i>`;
+                } else {
+                    // Maximize
+                    const rect = appWindow.getBoundingClientRect();
+                    appWindow.dataset.oldTop = `${rect.top}px`;
+                    appWindow.dataset.oldLeft = `${rect.left}px`;
+                    appWindow.dataset.oldWidth = `${rect.width}px`;
+                    appWindow.dataset.oldHeight = `${rect.height}px`;
+                    appWindow.classList.add('maximized');
+                    maximizeBtn.innerHTML = `<i class="fa-regular fa-window-restore"></i>`;
+                }
             });
 
             makeDraggable(appWindow, header);
+            createTaskbarIcon(appData, appWindow);
+            focusWindow(appWindow); // Focus on launch
 
-            // Logic for wallpaper change in settings
+            // Add focus listener to the window itself
+            appWindow.addEventListener('mousedown', () => focusWindow(appWindow));
+
+            // Settings app specific logic
             if (appId === 'settings') {
                 const changeBgBtn = appWindow.querySelector('#changeBgBtn');
                 const newBgUrlInput = appWindow.querySelector('#newBgUrl');
@@ -423,57 +412,42 @@
                     if (url) {
                         desktop.style.backgroundImage = `url(${url})`;
                     } else {
-                        setWallpaper(); // Or get a new random one
+                        setWallpaper();
                     }
                 });
             }
         }
         
-        /**
-         * Returns the content for a specific app window.
-         * @param {string} appId - The ID of the app.
-         * @returns {string} - The HTML content for the window body.
-         */
+        function createTaskbarIcon(appData, appWindow) {
+            const icon = document.createElement('button');
+            icon.id = `taskbar-icon-${appData.id}`;
+            icon.className = 'taskbar-icon';
+            icon.title = appData.name;
+            icon.innerHTML = `<i class="${appData.icon}" style="color: ${appData.color};"></i>`;
+            icon.addEventListener('click', () => focusWindow(appWindow));
+            runningAppsContainer.appendChild(icon);
+        }
+
         function getAppContent(appId) {
             switch(appId) {
-                case 'settings':
-                    return `
-                        <div class="settings-content">
-                            <h3>Appearance</h3>
-                            <div class="option">
-                                <label for="newBgUrl">Custom Wallpaper URL</label>
-                                <input type="text" id="newBgUrl" placeholder="Paste image URL here...">
-                            </div>
-                            <button id="changeBgBtn">Apply Wallpaper</button>
-                            <p style="font-size:12px; margin-top:10px;">Leave blank and click apply for a random one.</p>
-                        </div>
-                    `;
-                case 'notes':
-                    return `<textarea style="width:100%; height:100%; border:none; resize:none; background:transparent; font-family: 'Inter', sans-serif; font-size: 16px;" placeholder="Start typing your notes..."></textarea>`;
-                default:
-                    return `<p>This is the <strong>${appId}</strong> application. Functionality can be built here.</p>`;
+                case 'settings': return `<div class="settings-content"><h3>Appearance</h3><div class="option"><label for="newBgUrl">Custom Wallpaper URL</label><input type="text" id="newBgUrl" placeholder="Paste image URL here..."></div><button id="changeBgBtn">Apply Wallpaper</button><p style="font-size:12px; margin-top:10px;">Leave blank and click apply for a random one.</p></div>`;
+                case 'notes': return `<textarea style="width:100%; height:100%; border:none; resize:none; background:transparent; font-family: 'Inter', sans-serif; font-size: 16px;" placeholder="Start typing your notes..."></textarea>`;
+                default: return `<p>This is the <strong>${appId}</strong> application. Functionality can be built here.</p>`;
             }
         }
 
-        /**
-         * Makes an element draggable by its header.
-         * @param {HTMLElement} element - The element to make draggable.
-         * @param {HTMLElement} handle - The handle that triggers the drag.
-         */
         function makeDraggable(element, handle) {
             let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-            
             handle.onmousedown = dragMouseDown;
-
             function dragMouseDown(e) {
+                if (element.classList.contains('maximized')) return;
                 e.preventDefault();
-                element.style.zIndex = getHighestZIndex() + 1;
+                focusWindow(element);
                 pos3 = e.clientX;
                 pos4 = e.clientY;
                 document.onmouseup = closeDragElement;
                 document.onmousemove = elementDrag;
             }
-
             function elementDrag(e) {
                 e.preventDefault();
                 pos1 = pos3 - e.clientX;
@@ -483,103 +457,57 @@
                 element.style.top = (element.offsetTop - pos2) + "px";
                 element.style.left = (element.offsetLeft - pos1) + "px";
             }
-
             function closeDragElement() {
                 document.onmouseup = null;
                 document.onmousemove = null;
             }
         }
 
-        /**
-         * Gets the highest z-index on the page to ensure new windows appear on top.
-         * @returns {number} The highest z-index value.
-         */
-        function getHighestZIndex() {
-            return Array.from(document.querySelectorAll('.app-window'))
-                .reduce((max, el) => Math.max(max, +el.style.zIndex || 0), 0);
-        }
-
-        // --- 3. Event Listeners ---
+        // --- Event Listeners ---
+        menuButton.addEventListener('click', (e) => { e.stopPropagation(); toggleMenu(); });
+        document.addEventListener('click', (e) => { 
+            if (!appMenu.contains(e.target) && !menuButton.contains(e.target)) {
+                toggleMenu(false);
+            }
+            contextMenu.style.display = 'none'; // Also hide the context menu on any click
+        });
         
-        // Toggle menu on button click
-        menuButton.addEventListener('click', (e) => {
-            e.stopPropagation(); // Prevents click from closing menu immediately
-            toggleMenu();
+        appSearch.addEventListener('input', (e) => renderApps(APPS.filter(app => app.name.toLowerCase().includes(e.target.value.toLowerCase()))));
+
+        // Right-click context menu logic
+        desktop.addEventListener('contextmenu', (e) => {
+            e.preventDefault(); // Prevent the default browser context menu
+            contextMenu.style.left = `${e.clientX}px`;
+            contextMenu.style.top = `${e.clientY}px`;
+            contextMenu.style.display = 'block';
         });
 
-        // Close menu when clicking outside of it
+        // Hide context menu if clicked outside of it
         document.addEventListener('click', (e) => {
-            if (!appMenu.contains(e.target) && e.target !== menuButton && !menuButton.contains(e.target)) {
-                toggleMenu(false);
+            if (!contextMenu.contains(e.target)) {
+                contextMenu.style.display = 'none';
             }
         });
 
-        // Filter apps on search input
-        appSearch.addEventListener('input', (e) => {
-            const searchTerm = e.target.value.toLowerCase();
-            const filteredApps = APPS.filter(app => app.name.toLowerCase().includes(searchTerm));
-            renderApps(filteredApps);
+        // Add actions to context menu items
+        contextMenu.addEventListener('click', (e) => {
+            const action = e.target.closest('li').dataset.action;
+            switch(action) {
+                case 'change-wallpaper':
+                    setWallpaper();
+                    break;
+                case 'open-settings':
+                    launchApp('settings');
+                    break;
+            }
+            contextMenu.style.display = 'none';
         });
 
-        // --- 4. Initialization ---
+        // --- Initialization ---
         setWallpaper();
         updateClock();
-        setInterval(updateClock, 1000); // Update clock every second
+        setInterval(updateClock, 1000);
         renderApps();
-
-
-        const minimizeBtn = appWindow.querySelector('.minimize');
-const maximizeBtn = appWindow.querySelector('.maximize');
-
-// Store normal size for maximize/restore
-let isMaximized = false;
-let prevPos = {};
-
-maximizeBtn.addEventListener('click', () => {
-    if (!isMaximized) {
-        prevPos = {
-            top: appWindow.offsetTop,
-            left: appWindow.offsetLeft,
-            width: appWindow.offsetWidth,
-            height: appWindow.offsetHeight
-        };
-        appWindow.style.top = '0px';
-        appWindow.style.left = '0px';
-        appWindow.style.width = '100%';
-        appWindow.style.height = `calc(100% - 50px)`; // leave space for taskbar
-        isMaximized = true;
-    } else {
-        appWindow.style.top = prevPos.top + 'px';
-        appWindow.style.left = prevPos.left + 'px';
-        appWindow.style.width = prevPos.width + 'px';
-        appWindow.style.height = prevPos.height + 'px';
-        isMaximized = false;
-    }
-});
-
-minimizeBtn.addEventListener('click', () => {
-    appWindow.style.display = 'none';
-
-    // Add icon to taskbar
-    const taskbar = document.getElementById('runningApps');
-    let existingBtn = document.getElementById('taskbar-' + appId);
-    if (!existingBtn) {
-        const btn = document.createElement('button');
-        btn.id = 'taskbar-' + appId;
-        btn.innerHTML = `<i class="${appData.icon}"></i>`;
-        btn.title = appData.name;
-        btn.style.marginRight = '5px';
-        btn.style.padding = '5px';
-        btn.style.cursor = 'pointer';
-        btn.addEventListener('click', () => {
-            appWindow.style.display = 'flex';
-            appWindow.style.zIndex = getHighestZIndex() + 1;
-            btn.remove(); // remove from taskbar when restored
-        });
-        taskbar.appendChild(btn);
-    }
-});
-        
     });
     </script>
 </body>
