@@ -1045,17 +1045,23 @@
                     wallpaperInput.value = customWallpaper;
                 }
 
-                setWallpaperBtn.addEventListener('click', () => {
-                    const url = wallpaperInput.value.trim();
-                    if (url) {
-                        customWallpaper = url;
-                        localStorage.setItem('customWallpaper', url);
-                        setWallpaper();
-                        showMessageBox('Success', 'Wallpaper set successfully!');
-                    } else {
-                        showMessageBox('Error', 'Please enter a valid URL.');
-                    }
-                });
+                // Locate this block inside the launchApp(appId) case 'settings':
+setWallpaperBtn.addEventListener('click', () => {
+    const url = wallpaperInput.value.trim();
+    if (url) {
+        customWallpaper = url;
+        localStorage.setItem('customWallpaper', url);
+        setWallpaper();
+        showMessageBox('Success', 'Wallpaper set successfully!');
+    } else {
+        // FIXED LOGIC: Treat empty input as a reset
+        customWallpaper = null;
+        localStorage.removeItem('customWallpaper');
+        setWallpaper();
+        showMessageBox('Success', 'Wallpaper reset to default.');
+        wallpaperInput.value = '';
+    }
+});
 
                 resetWallpaperBtn.addEventListener('click', () => {
                     customWallpaper = null;
