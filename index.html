@@ -41,15 +41,54 @@
             background-position: center center;
             transition: background-image 0.5s ease-in-out;
             position: relative;
+            z-index: 1;
         }
 
-        #window-container {
+        #desktopCanvas {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
-            height: calc(100% - 50px); /* Avoids overlap with bottom bar */
-            pointer-events: none; /* Let clicks pass through to desktop unless on a window */
+            height: 100%;
+            z-index: -1; /* Place behind other elements */
+        }
+        
+        #homeScreenGrid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 20px;
+            padding: 20px;
+            height: calc(100% - 50px);
+            align-content: start;
+            justify-items: center;
+        }
+
+        .home-screen-app {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            text-decoration: none;
+            color: var(--text-color);
+        }
+        .home-screen-app:hover {
+            background-color: var(--hover-background);
+        }
+        .home-screen-app i {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+        .home-screen-app span {
+            font-size: 13px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
         }
 
         /* --- 3. Bottom Bar (Taskbar) --- */
@@ -142,12 +181,21 @@
         #appSearch { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background-color: rgba(255, 255, 255, 0.8); font-size: 16px; margin-bottom: 15px; }
         #appSearch:focus { outline: none; border-color: #007aff; box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.3); }
         #appGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 15px; overflow-y: auto; padding-right: 5px; }
-        .app-icon { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 10px; border-radius: 8px; cursor: pointer; transition: background-color 0.2s ease; text-decoration: none; color: var(--text-color); }
+        .app-icon { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 10px; border-radius: 8px; cursor: grab; transition: background-color 0.2s ease; text-decoration: none; color: var(--text-color); }
         .app-icon:hover { background-color: var(--hover-background); }
         .app-icon i { font-size: 32px; margin-bottom: 8px; }
         .app-icon span { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
 
         /* --- 5. App Windows --- */
+        #window-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: calc(100% - 50px);
+            pointer-events: none;
+        }
+
         .app-window {
             position: absolute;
             width: 600px;
@@ -160,10 +208,10 @@
             display: flex;
             flex-direction: column;
             resize: both;
-            overflow: hidden; /* Changed to hidden for iframes */
+            overflow: hidden;
             min-width: 250px;
             min-height: 150px;
-            pointer-events: auto; /* Re-enable pointer events for windows */
+            pointer-events: auto;
             transition: opacity 0.2s, transform 0.2s;
         }
         .app-window.minimized {
@@ -178,14 +226,14 @@
             height: 100% !important;
             border-radius: 0;
             resize: none;
-            transition: none; /* Disable transition for instant maximize */
+            transition: none;
         }
         .window-header { width: 100%; height: 35px; background-color: rgba(230, 230, 230, 0.7); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; padding: 0 10px; cursor: move; border-top-left-radius: 12px; border-top-right-radius: 12px; flex-shrink: 0; }
         .window-title { font-weight: 600; font-size: 14px; }
         .window-controls { display: flex; align-items: center; }
         .window-controls button { background: none; border: none; font-size: 14px; width: 28px; height: 28px; line-height: 28px; border-radius: 50%; cursor: pointer; color: var(--text-color); opacity: 0.7; }
         .window-controls button:hover { background-color: rgba(0, 0, 0, 0.1); opacity: 1;}
-        .window-body { flex-grow: 1; padding: 0; overflow: hidden; } /* Changed padding and overflow for iframes */
+        .window-body { flex-grow: 1; padding: 0; overflow: hidden; }
         
         /* Browser-specific styles */
         .browser-body {
@@ -230,6 +278,65 @@
             height: 100%;
             border: none;
         }
+        
+        /* Settings App Styles */
+        #settings-content {
+            padding: 20px;
+        }
+        .setting-section {
+            margin-bottom: 20px;
+        }
+        .setting-section h3 {
+            margin-bottom: 10px;
+        }
+        .setting-section input {
+            width: 100%;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+        .setting-section button {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 8px;
+            background-color: #007aff;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            margin-top: 5px;
+        }
+        .setting-section button:hover {
+            background-color: #005bb5;
+        }
+        
+        #messageBox {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 8px 30px var(--shadow-color);
+            padding: 20px;
+            max-width: 400px;
+            z-index: 20000;
+            display: none;
+            text-align: center;
+        }
+        #messageBox h4 {
+            margin-bottom: 10px;
+        }
+        #messageBox button {
+            background-color: #007aff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
 
         /* --- 6. Custom Context Menu --- */
         #contextMenu {
@@ -267,6 +374,8 @@
 <body>
 
     <div id="desktop">
+        <canvas id="desktopCanvas"></canvas>
+        <div id="homeScreenGrid"></div>
         <div id="window-container"></div>
     </div>
 
@@ -290,11 +399,19 @@
         <li class="context-menu-item" data-action="change-wallpaper"><i class="fa-solid fa-image"></i>Change Wallpaper</li>
         <li class="context-menu-item" data-action="open-settings"><i class="fa-solid fa-gears"></i>Open Settings</li>
     </ul>
+    
+    <div id="messageBox" style="display: none;">
+        <h4 id="messageBoxTitle"></h4>
+        <p id="messageBoxText"></p>
+        <button id="messageBoxOk">OK</button>
+    </div>
 
     <script>
     document.addEventListener('DOMContentLoaded', () => {
 
         const desktop = document.getElementById('desktop');
+        const desktopCanvas = document.getElementById('desktopCanvas');
+        const homeScreenGrid = document.getElementById('homeScreenGrid');
         const clockElement = document.getElementById('clock');
         const menuButton = document.getElementById('menuButton');
         const appMenu = document.getElementById('appMenu');
@@ -303,12 +420,16 @@
         const windowContainer = document.getElementById('window-container');
         const runningAppsContainer = document.getElementById('runningApps');
         const contextMenu = document.getElementById('contextMenu');
+        const messageBox = document.getElementById('messageBox');
+        const messageBoxTitle = document.getElementById('messageBoxTitle');
+        const messageBoxText = document.getElementById('messageBoxText');
+        const messageBoxOk = document.getElementById('messageBoxOk');
 
         const APPS = [
             // The sourceUrl for each app now points to the public GitHub Pages URL
             { id: 'browser', name: 'Browser', icon: 'fa-solid fa-globe', color: '#3498db' },
             { id: 'notes', name: 'Notes', icon: 'fa-solid fa-clipboard', color: '#f1c40f', sourceUrl: 'https://mahi902.github.io/Aurora/notes.html' },
-            { id: 'settings', name: 'Settings', icon: 'fa-solid fa-gears', color: '#95a5a6', sourceUrl: 'https://mahi902.github.io/Aurora/settings.html' },
+            { id: 'settings', name: 'Settings', icon: 'fa-solid fa-gears', color: '#95a5a6' }, // settings app is now self-contained
             { id: 'example', name: 'Code Editor', icon: 'fa-solid fa-code', color: '#1abc9c', sourceUrl: 'https://mahi902.github.io/Aurora/frontendide.html' },
             { id: 'files', name: 'Document Editor', icon: 'fa-solid fa-file', color: '#e67e22', sourceUrl: 'https://mahi902.github.io/Aurora/documenteditor.html' },
             { id: 'terminal', name: 'Word Finder', icon: 'fa-solid fa-font', color: '#2ecc71', sourceUrl: 'https://mahi902.github.io/Aurora/wordfinder.html' },
@@ -318,12 +439,65 @@
         ];
 
         let zIndexCounter = 100;
+        let homeScreenApps = JSON.parse(localStorage.getItem('homeScreenApps')) || [];
+        let customWallpaper = localStorage.getItem('customWallpaper');
+
+        function generateBlobWallpaper() {
+            const ctx = desktopCanvas.getContext('2d');
+            desktopCanvas.width = window.innerWidth;
+            desktopCanvas.height = window.innerHeight;
+
+            const baseColors = [
+                '#B0D4FF', '#A3F5E7', '#C4F6E5', '#D2F0FB', '#C6E8F6',
+                '#BBE4E9', '#D9E0EF', '#F5E4E3', '#F9E5D9', '#E6C6D6',
+                '#F3E1F5', '#E1EBF5', '#D9E5F9', '#F9F1E2', '#E7F5E1'
+            ];
+
+            // Use a specific color for the background
+            ctx.fillStyle = '#f0f4f9';
+            ctx.fillRect(0, 0, desktopCanvas.width, desktopCanvas.height);
+
+            const numBlobs = Math.floor(Math.random() * 5) + 3; // 3 to 7 blobs
+            for (let i = 0; i < numBlobs; i++) {
+                const color = baseColors[Math.floor(Math.random() * baseColors.length)];
+                const x = Math.random() * desktopCanvas.width;
+                const y = Math.random() * desktopCanvas.height;
+                const radius = Math.random() * 150 + 150;
+                const blur = Math.random() * 100 + 100;
+
+                const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+                gradient.addColorStop(0, color + 'e6');
+                gradient.addColorStop(1, color + '00');
+                
+                ctx.globalAlpha = 0.8;
+                ctx.filter = `blur(${blur}px)`;
+                ctx.fillStyle = gradient;
+                
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
 
         function setWallpaper() {
-            const keywords = ['light', 'minimal', 'abstract', 'gradient', 'nature', 'sky'];
-            const randomKeyword = keywords[Math.floor(Math.random() * keywords.length)];
-            desktop.style.backgroundImage = `url(https://source.unsplash.com/1920x1080/?${randomKeyword})`;
+            if (customWallpaper) {
+                desktopCanvas.style.display = 'none';
+                desktop.style.backgroundImage = `url('${customWallpaper}')`;
+            } else {
+                desktopCanvas.style.display = 'block';
+                desktop.style.backgroundImage = 'none';
+                generateBlobWallpaper();
+            }
         }
+
+        function showMessage(title, message) {
+            messageBoxTitle.textContent = title;
+            messageBoxText.textContent = message;
+            messageBox.style.display = 'block';
+        }
+        messageBoxOk.addEventListener('click', () => {
+            messageBox.style.display = 'none';
+        });
 
         function updateClock() {
             clockElement.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -337,6 +511,11 @@
                 appIcon.className = 'app-icon';
                 appIcon.dataset.appId = app.id;
                 appIcon.innerHTML = `<i class="${app.icon}" style="color: ${app.color};"></i><span>${app.name}</span>`;
+                appIcon.draggable = true;
+                appIcon.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.setData('text/plain', app.id);
+                    e.dataTransfer.effectAllowed = 'copy';
+                });
                 appIcon.addEventListener('click', (e) => {
                     e.preventDefault();
                     launchApp(app.id);
@@ -346,6 +525,34 @@
             });
         }
         
+        function renderHomeScreenApps() {
+            homeScreenGrid.innerHTML = '';
+            homeScreenApps.forEach(appId => {
+                const app = APPS.find(a => a.id === appId);
+                if (app) {
+                    const appIcon = document.createElement('a');
+                    appIcon.href = '#';
+                    appIcon.className = 'home-screen-app';
+                    appIcon.dataset.appId = app.id;
+                    appIcon.innerHTML = `<i class="${app.icon}" style="color: ${app.color};"></i><span>${app.name}</span>`;
+                    appIcon.draggable = true;
+                    appIcon.addEventListener('dragstart', (e) => {
+                        e.dataTransfer.setData('text/plain', app.id);
+                        e.dataTransfer.effectAllowed = 'move';
+                    });
+                    appIcon.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        launchApp(app.id);
+                    });
+                    homeScreenGrid.appendChild(appIcon);
+                }
+            });
+        }
+        
+        function saveHomeScreenApps() {
+            localStorage.setItem('homeScreenApps', JSON.stringify(homeScreenApps));
+        }
+
         function toggleMenu(forceState) {
             const isVisible = appMenu.classList.contains('visible');
             if (forceState === true || (!isVisible && forceState !== false)) {
@@ -379,7 +586,6 @@
             appWindow.style.left = `${Math.random() * 200 + 50}px`;
             appWindow.style.top = `${Math.random() * 100 + 50}px`;
             
-            // For the browser app, make the window a bit larger by default
             if (appId === 'browser') {
                 appWindow.style.width = '800px';
                 appWindow.style.height = '600px';
@@ -401,28 +607,23 @@
             
             windowContainer.appendChild(appWindow);
 
-            // --- Window Controls Logic ---
             const header = appWindow.querySelector('.window-header');
             const minimizeBtn = appWindow.querySelector('.minimize-btn');
             const maximizeBtn = appWindow.querySelector('.maximize-btn');
             const closeBtn = appWindow.querySelector('.close-btn');
 
-            // CLOSE
             closeBtn.addEventListener('click', () => {
                 appWindow.remove();
                 document.getElementById(`taskbar-icon-${appId}`).remove();
             });
 
-            // MINIMIZE
             minimizeBtn.addEventListener('click', () => {
                 appWindow.classList.add('minimized');
                 document.getElementById(`taskbar-icon-${appId}`).classList.remove('active');
             });
 
-            // MAXIMIZE / RESTORE
             maximizeBtn.addEventListener('click', () => {
                 if (appWindow.classList.contains('maximized')) {
-                    // Restore
                     appWindow.classList.remove('maximized');
                     appWindow.style.top = appWindow.dataset.oldTop;
                     appWindow.style.left = appWindow.dataset.oldLeft;
@@ -430,7 +631,6 @@
                     appWindow.style.height = appWindow.dataset.oldHeight;
                     maximizeBtn.innerHTML = `<i class="fa-regular fa-square"></i>`;
                 } else {
-                    // Maximize
                     const rect = appWindow.getBoundingClientRect();
                     appWindow.dataset.oldTop = `${rect.top}px`;
                     appWindow.dataset.oldLeft = `${rect.left}px`;
@@ -443,12 +643,10 @@
 
             makeDraggable(appWindow, header);
             createTaskbarIcon(appData, appWindow);
-            focusWindow(appWindow); // Focus on launch
+            focusWindow(appWindow);
             
-            // Add focus listener to the window itself
             appWindow.addEventListener('mousedown', () => focusWindow(appWindow));
             
-            // --- Browser App Specific Logic ---
             if (appId === 'browser') {
                 const urlInput = appWindow.querySelector('#urlInput');
                 const goBtn = appWindow.querySelector('#goBtn');
@@ -458,15 +656,11 @@
                     let url = urlInput.value.trim();
                     if (!url) return;
                     
-                    // Prepend https:// if no protocol is specified
                     if (!/^https?:\/\//i.test(url)) {
                         url = 'https://' + url;
                     }
                     
-                    // Update the iframe source
                     browserFrame.src = url;
-
-                    // Update the url input value to the full URL for consistency
                     urlInput.value = url;
                 };
 
@@ -476,22 +670,14 @@
                         loadUrl();
                     }
                 });
-
-                // Set a default, working URL
+                
                 browserFrame.src = 'https://placehold.co/800x600/1e293b/d4d4d4?text=Welcome!';
-
-                // Add event listener to update the input field when the iframe navigates
                 browserFrame.onload = () => {
                     try {
-                        // This can throw a security error for cross-origin iframes
                         const newUrl = browserFrame.contentWindow.location.href;
                         urlInput.value = newUrl;
                     } catch (e) {
-                        // The `e` variable contains the security error if the iframe is blocked
-                        // The input field will not be updated for blocked pages, but this is expected behavior
                         console.error("Could not access iframe location due to cross-origin security policy.");
-                        // Inform the user with a message box instead of alert()
-                        // This is a simple visual indication that something is wrong.
                         const frameDocument = browserFrame.contentDocument || browserFrame.contentWindow.document;
                         if (frameDocument) {
                             frameDocument.body.innerHTML = `
@@ -503,6 +689,36 @@
                         }
                     }
                 };
+            }
+            
+            if (appId === 'settings') {
+                const wallpaperInput = appWindow.querySelector('#wallpaperInput');
+                const setWallpaperBtn = appWindow.querySelector('#setWallpaperBtn');
+                const resetWallpaperBtn = appWindow.querySelector('#resetWallpaperBtn');
+
+                if (customWallpaper) {
+                    wallpaperInput.value = customWallpaper;
+                }
+
+                setWallpaperBtn.addEventListener('click', () => {
+                    const url = wallpaperInput.value.trim();
+                    if (url) {
+                        customWallpaper = url;
+                        localStorage.setItem('customWallpaper', url);
+                        setWallpaper();
+                        showMessage('Success', 'Wallpaper set successfully!');
+                    } else {
+                        showMessage('Error', 'Please enter a valid URL.');
+                    }
+                });
+
+                resetWallpaperBtn.addEventListener('click', () => {
+                    customWallpaper = null;
+                    localStorage.removeItem('customWallpaper');
+                    setWallpaper();
+                    showMessage('Success', 'Wallpaper reset to default.');
+                    wallpaperInput.value = '';
+                });
             }
         }
         
@@ -528,8 +744,19 @@
                             <iframe id="browserFrame" class="browser-iframe"></iframe>
                         </div>
                     `;
+                case 'settings':
+                    return `
+                        <div id="settings-content">
+                            <h2>Desktop Settings</h2>
+                            <div class="setting-section">
+                                <h3>Change Wallpaper</h3>
+                                <input type="text" id="wallpaperInput" placeholder="Enter image URL">
+                                <button id="setWallpaperBtn">Set Wallpaper</button>
+                                <button id="resetWallpaperBtn">Reset to Default</button>
+                            </div>
+                        </div>
+                    `;
                 default:
-                    // For all other apps, use an iframe to load the content from the source URL
                     if (appData.sourceUrl) {
                         return `<iframe src="${appData.sourceUrl}" class="browser-iframe"></iframe>`;
                     }
@@ -570,27 +797,24 @@
             if (!appMenu.contains(e.target) && !menuButton.contains(e.target)) {
                 toggleMenu(false);
             }
-            contextMenu.style.display = 'none'; // Also hide the context menu on any click
+            contextMenu.style.display = 'none';
         });
         
         appSearch.addEventListener('input', (e) => renderApps(APPS.filter(app => app.name.toLowerCase().includes(e.target.value.toLowerCase()))));
 
-        // Right-click context menu logic
         desktop.addEventListener('contextmenu', (e) => {
-            e.preventDefault(); // Prevent the default browser context menu
+            e.preventDefault();
             contextMenu.style.left = `${e.clientX}px`;
             contextMenu.style.top = `${e.clientY}px`;
             contextMenu.style.display = 'block';
         });
 
-        // Hide context menu if clicked outside of it
         document.addEventListener('click', (e) => {
             if (!contextMenu.contains(e.target)) {
                 contextMenu.style.display = 'none';
             }
         });
 
-        // Add actions to context menu items
         contextMenu.addEventListener('click', (e) => {
             const action = e.target.closest('li').dataset.action;
             switch(action) {
@@ -604,11 +828,63 @@
             contextMenu.style.display = 'none';
         });
 
+        // Drag and Drop for home screen
+        desktop.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+        });
+        desktop.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const appId = e.dataTransfer.getData('text/plain');
+            const sourceElement = e.target.closest('.app-icon, .home-screen-app');
+            
+            // Check if the drop is to add an app from the menu
+            if (e.dataTransfer.effectAllowed === 'copy') {
+                if (homeScreenApps.includes(appId)) {
+                    showMessage('Oops!', 'This app is already on the home screen.');
+                } else {
+                    homeScreenApps.push(appId);
+                    saveHomeScreenApps();
+                    renderHomeScreenApps();
+                }
+            } else if (e.dataTransfer.effectAllowed === 'move') {
+                 // Drop to remove an app from the home screen
+                const droppedOnApp = e.target.closest('.home-screen-app');
+                if (!droppedOnApp) {
+                    homeScreenApps = homeScreenApps.filter(id => id !== appId);
+                    saveHomeScreenApps();
+                    renderHomeScreenApps();
+                }
+            }
+        });
+        
+        // Handle drag and drop for home screen apps to delete
+        document.addEventListener('dragend', (e) => {
+            const appId = e.dataTransfer.getData('text/plain');
+            // Check if the source of the drag was a home screen app icon
+            const sourceIsHomeScreenApp = e.target.closest('.home-screen-app');
+            if (sourceIsHomeScreenApp) {
+                const droppedOnDesktop = e.clientX > 0 && e.clientX < window.innerWidth && e.clientY > 0 && e.clientY < window.innerHeight;
+                const droppedOnGrid = e.target.closest('#homeScreenGrid');
+                const droppedOnMenu = e.target.closest('#appMenu');
+
+                // If the app was dragged and dropped anywhere but the home screen grid or menu
+                if (droppedOnDesktop && !droppedOnGrid && !droppedOnMenu) {
+                    homeScreenApps = homeScreenApps.filter(id => id !== appId);
+                    saveHomeScreenApps();
+                    renderHomeScreenApps();
+                }
+            }
+        });
+
         // --- Initialization ---
         setWallpaper();
         updateClock();
         setInterval(updateClock, 1000);
         renderApps();
+        renderHomeScreenApps();
+        
+        window.addEventListener('resize', setWallpaper);
     });
     </script>
 </body>
