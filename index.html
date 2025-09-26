@@ -160,7 +160,7 @@
             display: flex;
             flex-direction: column;
             resize: both;
-            overflow: auto;
+            overflow: hidden; /* Changed to hidden for iframes */
             min-width: 250px;
             min-height: 150px;
             pointer-events: auto; /* Re-enable pointer events for windows */
@@ -185,11 +185,7 @@
         .window-controls { display: flex; align-items: center; }
         .window-controls button { background: none; border: none; font-size: 14px; width: 28px; height: 28px; line-height: 28px; border-radius: 50%; cursor: pointer; color: var(--text-color); opacity: 0.7; }
         .window-controls button:hover { background-color: rgba(0, 0, 0, 0.1); opacity: 1;}
-        .window-body { flex-grow: 1; padding: 20px; overflow-y: auto; }
-        .settings-content h3 { margin-bottom: 15px; }
-        .settings-content .option { margin-bottom: 10px; }
-        .settings-content input[type="text"] { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); }
-        .settings-content button { padding: 8px 15px; border-radius: 6px; border: none; background-color: #007aff; color: white; cursor: pointer; margin-top: 5px; }
+        .window-body { flex-grow: 1; padding: 0; overflow: hidden; } /* Changed padding and overflow for iframes */
         
         /* Browser-specific styles */
         .browser-body {
@@ -231,6 +227,7 @@
         .browser-iframe {
             flex-grow: 1;
             width: 100%;
+            height: 100%;
             border: none;
         }
 
@@ -308,11 +305,11 @@
         const contextMenu = document.getElementById('contextMenu');
 
         const APPS = [
-            // The sourceUrl for each app is now specified here.
+            // The sourceUrl for each app now points to the public GitHub Pages URL
             { id: 'browser', name: 'Browser', icon: 'fa-solid fa-globe', color: '#3498db' },
-            { id: 'notes', name: 'Notes', icon: 'fa-solid fa-clipboard', color: '#f1c40f', sourceUrl: 'https://raw.githubusercontent.com/Mahi902/Aurora/main/notes.html' },
-            { id: 'settings', name: 'Settings', icon: 'fa-solid fa-gears', color: '#95a5a6', sourceUrl: 'https://raw.githubusercontent.com/Mahi902/Aurora/main/settings.html' },
-            { id: 'example', name: 'Example App', icon: 'fa-solid fa-code', color: '#1abc9c', sourceUrl: 'https://raw.githubusercontent.com/Mahi902/Aurora/main/example.html' },
+            { id: 'notes', name: 'Notes', icon: 'fa-solid fa-clipboard', color: '#f1c40f', sourceUrl: 'https://mahi902.github.io/Aurora/notes.html' },
+            { id: 'settings', name: 'Settings', icon: 'fa-solid fa-gears', color: '#95a5a6', sourceUrl: 'https://mahi902.github.io/Aurora/settings.html' },
+            { id: 'example', name: 'Example App', icon: 'fa-solid fa-code', color: '#1abc9c', sourceUrl: 'https://mahi902.github.io/Aurora/example.html' },
             { id: 'files', name: 'Files', icon: 'fa-solid fa-folder', color: '#e67e22' },
             { id: 'terminal', name: 'Terminal', icon: 'fa-solid fa-terminal', color: '#2ecc71' },
             { id: 'calculator', name: 'Calculator', icon: 'fa-solid fa-calculator', color: '#34495e' },
@@ -359,40 +356,12 @@
         }
 
         function focusWindow(appWindow) {
-            // Un-minimize if necessary
             appWindow.classList.remove('minimized');
-            
-            // Bring to front
             appWindow.style.zIndex = ++zIndexCounter;
-
-            // Update active state on taskbar
             document.querySelectorAll('.taskbar-icon').forEach(icon => icon.classList.remove('active'));
             document.getElementById(`taskbar-icon-${appWindow.dataset.appId}`).classList.add('active');
         }
-
-        async function fetchAppCode(url, appId) {
-            try {
-                const response = await fetch(url);
-                if (!response.ok) {
-                    throw new Error(`Failed to load app: ${response.statusText}`);
-                }
-                const htmlContent = await response.text();
-                const windowBody = document.querySelector(`#window-${appId} .app-body-container`);
-                if (windowBody) {
-                    windowBody.innerHTML = htmlContent;
-                }
-            } catch (error) {
-                console.error(`Error fetching app code for ${appId}:`, error);
-                const windowBody = document.querySelector(`#window-${appId} .app-body-container`);
-                if (windowBody) {
-                    windowBody.innerHTML = `<div style="text-align: center; color: #e74c3c;">
-                                                <p>Failed to load app content.</p>
-                                                <p>Error: ${error.message}</p>
-                                            </div>`;
-                }
-            }
-        }
-
+        
         function launchApp(appId) {
             const existingWindow = document.getElementById(`window-${appId}`);
             if (existingWindow) {
@@ -426,9 +395,7 @@
                     </div>
                 </div>
                 <div class="window-body">
-                    <div class="app-body-container">
-                        ${getAppContent(appId)}
-                    </div>
+                    ${getAppContent(appData)}
                 </div>
             `;
             
@@ -480,33 +447,6 @@
 
             // Add focus listener to the window itself
             appWindow.addEventListener('mousedown', () => focusWindow(appWindow));
-
-            // Logic to fetch and load app content
-            if (appData.sourceUrl) {
-                fetchAppCode(appData.sourceUrl, appId);
-            } else if (appId === 'browser') {
-                // Browser-specific logic remains the same
-                const urlInput = appWindow.querySelector('#urlInput');
-                const goBtn = appWindow.querySelector('#goBtn');
-                const browserFrame = appWindow.querySelector('#browserFrame');
-                
-                const navigate = () => {
-                    let url = urlInput.value.trim();
-                    if (!url.match(/^(http|https):\/\//)) {
-                        url = 'https://' + url;
-                    }
-                    browserFrame.src = url;
-                };
-
-                urlInput.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter') {
-                        navigate();
-                    }
-                });
-                goBtn.addEventListener('click', navigate);
-                
-                browserFrame.src = "https://www.google.com";
-            }
         }
         
         function createTaskbarIcon(appData, appWindow) {
@@ -519,8 +459,8 @@
             runningAppsContainer.appendChild(icon);
         }
 
-        function getAppContent(appId) {
-            switch(appId) {
+        function getAppContent(appData) {
+            switch(appData.id) {
                 case 'browser':
                     return `
                         <div class="browser-body">
@@ -528,15 +468,15 @@
                                 <input type="text" id="urlInput" placeholder="Enter URL or search...">
                                 <button id="goBtn"><i class="fa-solid fa-arrow-right"></i></button>
                             </div>
-                            <iframe id="browserFrame" class="browser-iframe" allow="clipboard-read; clipboard-write"></iframe>
+                            <iframe id="browserFrame" class="browser-iframe"></iframe>
                         </div>
                     `;
-                // The following apps are now loaded dynamically.
-                case 'settings':
-                case 'notes':
-                case 'example':
-                    return `<p style="text-align: center;">Loading app...</p>`;
-                default: return `<p>This is the <strong>${appId}</strong> application. Functionality can be built here.</p>`;
+                default:
+                    // For all other apps, use an iframe to load the content from the source URL
+                    if (appData.sourceUrl) {
+                        return `<iframe src="${appData.sourceUrl}" class="browser-iframe"></iframe>`;
+                    }
+                    return `<div style="padding: 20px;"><p>This is the <strong>${appData.id}</strong> application. Functionality can be built here.</p></div>`;
             }
         }
 
