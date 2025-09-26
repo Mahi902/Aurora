@@ -75,23 +75,6 @@
   text-decoration-thickness: 1px;
   text-underline-offset: 2px;
 }
-/* Font size display button: looks muted but is clickable */
-.font-size-display {
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-  background: none;
-  border: none;
-  padding-right: 0;
-  cursor: pointer;        /* clickable */
-  color: var(--text-color);
-  opacity: 0.7;           /* "disabled" look */
-  transition: opacity 0.2s;
-}
-
-.font-size-display:hover {
-  opacity: 1;             /* highlight on hover */
-}
 
 </style>
     <style>
@@ -569,43 +552,6 @@ body.dark-mode .sidebar-btn {
             margin-top: 20px;
         }
         
-#font-size-bar {
-  display: none;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  border-top: 1px solid var(--border-color);
-  background: var(--toolbar-bg);
-  animation: slideDown 0.25s ease;
-}
-
-#font-size-bar input[type="number"] {
-  width: 60px;
-  padding: 4px;
-  font-size: 14px;
-}
-
-#font-size-bar input[type="range"] {
-  flex: 1;
-}
-
-#font-size-bar button {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 16px;
-  padding: 4px 8px;
-  border-radius: 4px;
-}
-#font-size-bar button:hover {
-  background: var(--hover-bg);
-}
-
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
         .btn {
             padding: 10px 16px;
             border: none;
@@ -742,7 +688,7 @@ body.dark-mode .sidebar-btn {
             }
         }
     </style>
-</head>
+<style></style></head>
 <body>
     <!-- Header -->
     <header>
@@ -757,15 +703,15 @@ body.dark-mode .sidebar-btn {
         <div class="header-actions">
             <button class="action-btn" id="dark-mode-toggle">
                 <i class="material-icons">dark_mode</i>
-                
+                Dark Mode
             </button>
             <button class="action-btn" id="fullscreen-btn">
                 <i class="material-icons">fullscreen</i>
-                
+                Fullscreen
             </button>
             <button class="action-btn" id="save-btn">
                 <i class="material-icons">save</i>
-                
+                Save
             </button>
             <button class="action-btn" id="export-btn">
                 <i class="material-icons">download</i>
@@ -848,10 +794,15 @@ body.dark-mode .sidebar-btn {
     <option value="Times New Roman">Advanced Fonts</option>
     
 </select>
-            <button class="toolbar-select font-size-display" id="font-size-display">
-  14pt
-</button>
-
+            <select class="toolbar-select" id="font-size">
+                <option value="1">8pt</option>
+                <option value="2">10pt</option>
+                <option value="3">12pt</option>
+                <option value="4">14pt</option>
+                <option value="5">18pt</option>
+                <option value="6">24pt</option>
+                <option value="7">36pt</option>
+            </select>
         </div>
         
         <div class="toolbar-group">
@@ -862,14 +813,7 @@ body.dark-mode .sidebar-btn {
             </button>
         </div>
     </div>
-    <div id="font-size-bar">
-  <input type="number" id="font-size-input" min="6" max="200" value="14"> pt
-  <input type="range" id="font-size-range" min="6" max="200" value="14">
-  <button id="font-size-minus">−</button>
-  <button id="font-size-plus">+</button>
-  <button id="font-size-hide">✕</button>
-</div>
-
+    
     <!-- Editor Area -->
     <div class="editor-container">
         <!-- Sidebar -->
@@ -3609,7 +3553,7 @@ document.getElementById('font-family').addEventListener('change', function() {
             }
         });
     </script>
-<!-- Add this at the end of your body before </body> -->
+<!-- Add this at the end of your body before <script></script></body> -->
 <script>
 document.addEventListener("DOMContentLoaded", () => {
     let popup, keyboardIcon;
@@ -4372,168 +4316,6 @@ document.addEventListener('DOMContentLoaded', function() {
         $('.page, #editor, .document-container').css('font-family', font);
         advancedFontsModal.classList.remove('active');
     });
-});
-</script>
-<script>
-(function(){
-  const CONF = { wpm: 200, debounceMs: 120 };
-
-  // Get all editable containers (handles single #editor and multi .editor-page)
-  function getEditors(){
-    return Array.from(document.querySelectorAll('#editor, .editor-page')).filter(Boolean);
-  }
-
-  function getFullText(){
-    const editors = getEditors();
-    if(editors.length === 0) return '';
-    return editors.map(e => (e.innerText || e.textContent || '')).join(' ');
-  }
-
-  function countWords(text){
-    if(!text) return 0;
-    // Normalize NBSP and split on whitespace
-    const t = text.replace(/\u00A0/g,' ').trim();
-    if(!t) return 0;
-    return t.split(/\s+/).filter(Boolean).length;
-  }
-
-  function safeSet(el, txt){
-    if(!el) return;
-    try{ el.textContent = txt; } catch(e){ console.error('wordcount:set', e); }
-  }
-
-  function updateWordUI(){
-    try {
-      const text = getFullText();
-      const words = countWords(text);
-      const wc = document.getElementById('word-count');
-      const rt = document.getElementById('reading-time');
-
-      if(wc) safeSet(wc, `${words} words`);
-
-      if(rt) {
-        const mins = words > 0 ? Math.max(1, Math.ceil(words / CONF.wpm)) : 0;
-        safeSet(rt, words > 0 ? `${mins} min read` : '0 min read');
-      }
-    } catch(err){
-      console.error('updateWordUI error', err);
-    }
-  }
-
-  // Debounced scheduler
-  let _timer = null;
-  function scheduleUpdate(){
-    if(_timer) clearTimeout(_timer);
-    _timer = setTimeout(()=>{ updateWordUI(); _timer = null; }, CONF.debounceMs);
-  }
-
-  // Attach listeners to any editor nodes (idempotent)
-  function attachListeners(){
-    getEditors().forEach(el => {
-      if(el.__dw_wc_attached) return;
-      el.addEventListener('input', scheduleUpdate, { passive: true });
-      el.addEventListener('paste', ()=> setTimeout(scheduleUpdate, 60), { passive: true });
-      // Watch for attribute changes like contentEditable toggles
-      const attrObs = new MutationObserver(() => scheduleUpdate());
-      attrObs.observe(el, { attributes: true, attributeFilter: ['contenteditable'] });
-      el.__dw_wc_attached = true;
-    });
-  }
-
-  // Global document fallback: catch any input that happens inside editor(s)
-  document.addEventListener('input', (e) => {
-    if(e.target && e.target.closest && e.target.closest('#editor, .editor-page')) scheduleUpdate();
-  }, true);
-
-  // Observe DOM for newly added editor elements (dynamic pages)
-  const mo = new MutationObserver((mutations) => {
-    let found = false;
-    for(const m of mutations){
-      for(const n of m.addedNodes){
-        if(n.nodeType !== 1) continue;
-        if(n.matches && (n.matches('#editor') || n.matches('.editor-page'))) { found = true; break; }
-        if(n.querySelector && (n.querySelector('#editor') || n.querySelector('.editor-page'))) { found = true; break; }
-      }
-      if(found) break;
-    }
-    if(found) { attachListeners(); scheduleUpdate(); }
-  });
-  mo.observe(document.body, { childList: true, subtree: true });
-
-  // Initial setup
-  if(document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', () => { attachListeners(); updateWordUI(); });
-  } else {
-    attachListeners();
-    updateWordUI();
-  }
-
-  // Expose a safe manual trigger if you need to call from other scripts
-  window.__dw_updateWordCount = updateWordUI;
-})();
-</script>
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-  const fontSizeDisplay = document.getElementById("font-size-display");
-  const fontSizeBar = document.getElementById("font-size-bar");
-  const input = document.getElementById("font-size-input");
-  const range = document.getElementById("font-size-range");
-  const plus = document.getElementById("font-size-plus");
-  const minus = document.getElementById("font-size-minus");
-  const hideBtn = document.getElementById("font-size-hide");
-  const editor = document.getElementById("editor");
-
-  // Show font size bar
-  fontSizeDisplay.addEventListener("click", () => {
-    fontSizeBar.style.display = "flex";
-  });
-
-  // Hide font size bar
-  hideBtn.addEventListener("click", () => {
-    fontSizeBar.style.display = "none";
-  });
-
-  // Apply font size to selected text or editor
-  function applySize(size) {
-    size = parseInt(size);
-    if (isNaN(size) || size < 6) size = 6;
-    if (size > 200) size = 200;
-
-    // Update toolbar display and controls
-    fontSizeDisplay.textContent = size + "pt";
-    input.value = size;
-    range.value = size;
-
-    const selection = window.getSelection();
-    if (!selection.rangeCount) return;
-
-    const rangeSel = selection.getRangeAt(0);
-    if (rangeSel.collapsed) {
-      // No text selected → change editor default font size
-      editor.style.fontSize = size + "pt";
-      return;
-    }
-
-    // Check if selection is inside a span with font-size
-    let container = selection.focusNode.parentElement;
-    if (container && container.tagName === "SPAN" && container.style.fontSize) {
-      container.style.fontSize = size + "pt";
-    } else {
-      // Wrap selection in a new span
-      const span = document.createElement("span");
-      span.style.fontSize = size + "pt";
-      span.appendChild(rangeSel.extractContents());
-      rangeSel.insertNode(span);
-    }
-  }
-
-  // Input and range events
-  input.addEventListener("input", () => applySize(input.value));
-  range.addEventListener("input", () => applySize(range.value));
-
-  // Plus / Minus buttons
-  plus.addEventListener("click", () => applySize(parseInt(input.value) + 1));
-  minus.addEventListener("click", () => applySize(parseInt(input.value) - 1));
 });
 </script>
 
