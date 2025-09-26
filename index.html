@@ -527,6 +527,59 @@
         setInterval(updateClock, 1000); // Update clock every second
         renderApps();
 
+
+        const minimizeBtn = appWindow.querySelector('.minimize');
+const maximizeBtn = appWindow.querySelector('.maximize');
+
+// Store normal size for maximize/restore
+let isMaximized = false;
+let prevPos = {};
+
+maximizeBtn.addEventListener('click', () => {
+    if (!isMaximized) {
+        prevPos = {
+            top: appWindow.offsetTop,
+            left: appWindow.offsetLeft,
+            width: appWindow.offsetWidth,
+            height: appWindow.offsetHeight
+        };
+        appWindow.style.top = '0px';
+        appWindow.style.left = '0px';
+        appWindow.style.width = '100%';
+        appWindow.style.height = `calc(100% - 50px)`; // leave space for taskbar
+        isMaximized = true;
+    } else {
+        appWindow.style.top = prevPos.top + 'px';
+        appWindow.style.left = prevPos.left + 'px';
+        appWindow.style.width = prevPos.width + 'px';
+        appWindow.style.height = prevPos.height + 'px';
+        isMaximized = false;
+    }
+});
+
+minimizeBtn.addEventListener('click', () => {
+    appWindow.style.display = 'none';
+
+    // Add icon to taskbar
+    const taskbar = document.getElementById('runningApps');
+    let existingBtn = document.getElementById('taskbar-' + appId);
+    if (!existingBtn) {
+        const btn = document.createElement('button');
+        btn.id = 'taskbar-' + appId;
+        btn.innerHTML = `<i class="${appData.icon}"></i>`;
+        btn.title = appData.name;
+        btn.style.marginRight = '5px';
+        btn.style.padding = '5px';
+        btn.style.cursor = 'pointer';
+        btn.addEventListener('click', () => {
+            appWindow.style.display = 'flex';
+            appWindow.style.zIndex = getHighestZIndex() + 1;
+            btn.remove(); // remove from taskbar when restored
+        });
+        taskbar.appendChild(btn);
+    }
+});
+        
     });
     </script>
 </body>
