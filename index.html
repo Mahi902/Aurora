@@ -1049,21 +1049,21 @@
 
                 // Locate this block inside the launchApp(appId) case 'settings':
 setWallpaperBtn.addEventListener('click', () => {
-    const url = wallpaperInput.value.trim();
-    if (url) {
-        customWallpaper = url;
-        localStorage.setItem('customWallpaper', url);
-        setWallpaper();
-        showMessageBox('Success', 'Wallpaper set successfully!');
-    } else {
-        // FIXED LOGIC: Treat empty input as a reset
-        customWallpaper = null;
-        localStorage.removeItem('customWallpaper');
-        setWallpaper();
-        showMessageBox('Success', 'Wallpaper reset to default.');
-        wallpaperInput.value = '';
-    }
-});
+                    const url = wallpaperInput.value.trim();
+                    if (url) {
+                        customWallpaper = url;
+                        localStorage.setItem('customWallpaper', url);
+                        setWallpaper();
+                        showMessageBox('Success', 'Wallpaper set successfully!');
+                    } else {
+                        // FIX: Treat empty input as a full reset to default/gradient
+                        customWallpaper = null;
+                        localStorage.removeItem('customWallpaper');
+                        setWallpaper();
+                        showMessageBox('Success', 'Wallpaper reset to default.');
+                        wallpaperInput.value = ''; // Clears the input field display
+                    }
+                });
 
                 resetWallpaperBtn.addEventListener('click', () => {
                     customWallpaper = null;
