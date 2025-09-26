@@ -1,87 +1,157 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aurora - Video Editor</title>
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aurora Launcher</title>
+<style>
+    /* Reset */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body, html {
+        width: 100%;
+        height: 100%;
+        font-family: Arial, sans-serif;
+        background: #1e1e2f;
+        color: #fff;
+        overflow: hidden;
+    }
+
+    /* Sidebar */
+    #sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 200px;
+        height: 100%;
+        background: #2c2c3e;
+        padding: 20px 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    #sidebar h2 {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    #sidebar button {
+        padding: 10px;
+        border: none;
+        background: #44445c;
+        color: white;
+        cursor: pointer;
+        border-radius: 5px;
+        transition: 0.2s;
+    }
+
+    #sidebar button:hover {
+        background: #5a5a7d;
+    }
+
+    /* Taskbar */
+    #taskbar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 50px;
+        background: #2c2c3e;
+        display: flex;
+        align-items: center;
+        padding: 0 10px;
+        gap: 10px;
+    }
+
+    #start-btn {
+        padding: 8px 12px;
+        background: #44445c;
+        border: none;
+        color: white;
+        cursor: pointer;
+        border-radius: 4px;
+    }
+
+    #start-menu {
+        position: fixed;
+        bottom: 50px;
+        left: 10px;
+        width: 200px;
+        background: #3b3b5c;
+        padding: 10px;
+        border-radius: 6px;
+        display: none;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    #start-menu button {
+        padding: 8px;
+        background: #5a5a7d;
+        border: none;
+        color: white;
+        cursor: pointer;
+        border-radius: 4px;
+    }
+
+    #start-menu button:hover {
+        background: #7070a0;
+    }
+
+    /* Main content area */
+    #main {
+        margin-left: 200px;
+        margin-bottom: 50px;
+        padding: 20px;
+        height: calc(100% - 50px);
+        overflow: auto;
+    }
+</style>
 </head>
 <body>
 
-    <div class="editor-container">
-        <div class="top-bar">
-            <h1>Aurora</h1>
-        </div>
+<!-- Sidebar -->
+<div id="sidebar">
+    <h2>Aurora</h2>
+    <button>File Explorer</button>
+    <button>Settings</button>
+    <button>Apps</button>
+</div>
 
-        <div class="main-workspace">
-            <div class="left-panel">
-                <div class="panel-header">Tools</div>
-                <div class="panel-tabs">
-                    <button class="tab-button active" data-tab="media"><i class="fas fa-folder"></i> Media</button>
-                    <button class="tab-button" data-tab="effects"><i class="fas fa-magic"></i> Effects</button>
-                    <button class="tab-button" data-tab="text"><i class="fas fa-font"></i> Text</button>
-                </div>
-                <div class="tab-content active" id="media">
-                    <div class="media-library">
-                        <div class="media-item" draggable="true" data-src="https://www.w3schools.com/html/mov_bbb.mp4">
-                            <img src="https://via.placeholder.com/120x80/2980b9/ffffff?text=Clip+1" alt="Video Clip 1">
-                            <span class="media-name">Clip 1</span>
-                        </div>
-                        <div class="media-item" draggable="true" data-src="https://www.w3schools.com/html/movie.mp4">
-                            <img src="https://via.placeholder.com/120x80/c0392b/ffffff?text=Clip+2" alt="Video Clip 2">
-                            <span class="media-name">Clip 2</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="tab-content" id="effects">
-                    <p>Effects library coming soon...</p>
-                </div>
-                <div class="tab-content" id="text">
-                    <p>Text tool coming soon...</p>
-                </div>
-            </div>
+<!-- Main content -->
+<div id="main">
+    <h1>Welcome to Aurora</h1>
+    <p>This is your web-based launcher. Click the Start button below to access the main menu.</p>
+</div>
 
-            <div class="center-panel">
-                <div class="video-viewer">
-                    <video id="video-element" class="video-player" controls></video>
-                </div>
-                <div class="viewer-controls">
-                    <div class="controls-left">
-                        <button id="play-pause-btn" class="control-btn"><i class="fas fa-play"></i></button>
-                        <button id="trim-btn" class="control-btn"><i class="fas fa-cut"></i></button>
-                    </div>
-                    <div class="timeline-slider">
-                        <input type="range" id="seek-bar" min="0" value="0">
-                        <div class="time-display">
-                            <span id="current-time">00:00</span> / <span id="duration">00:00</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+<!-- Taskbar -->
+<div id="taskbar">
+    <button id="start-btn">Start</button>
+</div>
 
-            <div class="right-panel">
-                <div class="panel-header">Properties</div>
-                <div class="panel-content">
-                    <p>Clip properties will appear here.</p>
-                </div>
-            </div>
-        </div>
+<!-- Start menu -->
+<div id="start-menu">
+    <button>Notepad</button>
+    <button>Calculator</button>
+    <button>Browser</button>
+</div>
 
-        <div class="bottom-panel">
-            <div class="panel-header">Timeline</div>
-            <div class="timeline" id="timeline">
-                <div class="timeline-track" id="video-track">
-                    <div class="track-label">Video</div>
-                </div>
-                <div class="timeline-track" id="audio-track">
-                    <div class="track-label">Audio</div>
-                </div>
-            </div>
-        </div>
-    </div>
+<script>
+    const startBtn = document.getElementById('start-btn');
+    const startMenu = document.getElementById('start-menu');
 
-    <script src="script.js"></script>
+    startBtn.addEventListener('click', () => {
+        startMenu.style.display = startMenu.style.display === 'flex' ? 'none' : 'flex';
+    });
+
+    // Close start menu if clicked outside
+    document.addEventListener('click', (e) => {
+        if (!startBtn.contains(e.target) && !startMenu.contains(e.target)) {
+            startMenu.style.display = 'none';
+        }
+    });
+</script>
+
 </body>
 </html>
