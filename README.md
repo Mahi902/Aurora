@@ -1,35 +1,23 @@
-# Aurora 🎬
+# Aurora - Web-Based Launcher
 
-Aurora is a web-based video editing platform built by **Mohtadi Azad Mahi**.  
-Its goal is to let users upload, edit, and export videos right from the browser — powerful, yet simple.
-
----
-
-## 🚀 Features
-
-- Upload and preview videos  
-- Trim & cut clips  
-- Apply filters & basic effects  
-- Add text overlays & transitions  
-- Export edited videos (in browser)  
-- [Planned] Layers, timelines, collaboration, more export formats
+Aurora is a **web-based operating system/launcher** inspired by desktop environments like Windows. It runs entirely in a browser, providing a desktop-like interface with a sidebar, bottom taskbar, and a start menu. Aurora is built to be modular and expandable, allowing developers to add apps, widgets, and custom features.
 
 ---
 
-## 🧰 Tech Stack
+## Features
 
-| Component | Technology |
-|-----------|------------|
-| Frontend | HTML, CSS, JavaScript |
-| Bundler / Build | (if you use one later, e.g. Webpack, Vite) |
-| Storage / Backend | (if applies) |
-| Video Processing | (Browser-APIs / WebAssembly / external tools) |
+- **Sidebar** – Quick access to File Explorer, Settings, and Apps.  
+- **Bottom Taskbar** – Displays a Start button and future system notifications.  
+- **Start Menu** – Open apps like Notepad, Calculator, and Browser.  
+- **Main Content Area** – Workspace for apps and content.  
+- **Responsive UI** – Works on modern desktop browsers.  
+- **Click Outside to Close Menus** – Intuitive interface for better user experience.
 
 ---
 
-## ⚙️ Setup & Usage
+## Installation / Usage
 
-1. Clone the repo:  
-   ```bash
-   git clone https://github.com/Mahi902/Aurora.git
-   
+1. **Clone the repository:**
+
+```bash
+git clone https://github.com/yourusername/aurora.git
