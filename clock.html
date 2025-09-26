@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Clock</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+        }
+        .container {
+            max-width: 900px;
+        }
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+        .tab-button.active {
+            background-color: #6366f1;
+            color: white;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .tab-panel {
+            display: none;
+        }
+        .tab-panel.active {
+            display: block;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+    <div class="container mx-auto bg-white rounded-3xl shadow-xl p-8 transform transition-all duration-500 hover:scale-[1.01]">
+        
+        <!-- Tab Navigation -->
+        <div class="flex justify-center mb-6 space-x-4">
+            <button id="tab-clock" class="tab-button active bg-indigo-500 text-white font-semibold py-2 px-6 rounded-full transition-all duration-200">
+                Clock
+            </button>
+            <button id="tab-alarm" class="tab-button bg-slate-200 text-slate-700 font-semibold py-2 px-6 rounded-full transition-all duration-200 hover:bg-slate-300">
+                Alarm
+            </button>
+            <button id="tab-timer" class="tab-button bg-slate-200 text-slate-700 font-semibold py-2 px-6 rounded-full transition-all duration-200 hover:bg-slate-300">
+                Timer
+            </button>
+        </div>
+        
+        <!-- Tab Panels -->
+        <div id="tab-panels">
+            
+            <!-- Clock Panel -->
+            <div id="clock-panel" class="tab-panel active text-center">
+                <h1 class="text-4xl sm:text-5xl font-extrabold text-slate-800 mb-6 tracking-tight">Clock</h1>
+                <div id="clock" class="text-6xl sm:text-8xl font-bold text-slate-900 mb-4 transition-all duration-300 ease-in-out">
+                    00:00:00
+                </div>
+                <div id="date-day" class="text-lg sm:text-xl font-medium text-slate-600 mb-6">
+                    <span id="day"></span>, <span id="date"></span>
+                </div>
+                <div class="border-t border-slate-200 pt-6">
+                    <button id="format-toggle" class="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-full shadow-lg transition-colors duration-200">
+                        Switch to 12-hour
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Alarm Panel -->
+            <div id="alarm-panel" class="tab-panel text-center">
+                <h2 class="text-3xl font-bold text-slate-700 mb-6">Set an Alarm</h2>
+                <div class="flex items-center justify-center space-x-2 mb-4">
+                    <input type="time" id="alarm-time" class="p-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <button id="set-alarm" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-md transition-colors duration-200">
+                        Set
+                    </button>
+                </div>
+                <div id="alarm-status" class="text-sm font-medium text-slate-500 min-h-[1.5rem]"></div>
+            </div>
+            
+            <!-- Timer Panel -->
+            <div id="timer-panel" class="tab-panel text-center">
+                <h2 class="text-3xl font-bold text-slate-700 mb-6">Set a Timer</h2>
+                <div class="flex justify-center items-center space-x-2 mb-4">
+                    <input type="number" id="timer-hours" min="0" max="99" placeholder="HH" class="w-16 p-2 text-center border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <span class="text-xl font-semibold text-slate-700">:</span>
+                    <input type="number" id="timer-minutes" min="0" max="59" placeholder="MM" class="w-16 p-2 text-center border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <span class="text-xl font-semibold text-slate-700">:</span>
+                    <input type="number" id="timer-seconds" min="0" max="59" placeholder="SS" class="w-16 p-2 text-center border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div class="flex justify-center space-x-4 mb-4">
+                    <button id="start-timer" class="bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2 px-4 rounded-md transition-colors duration-200">
+                        Start
+                    </button>
+                    <button id="reset-timer" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-md transition-colors duration-200">
+                        Reset
+                    </button>
+                </div>
+                <div id="timer-display" class="mt-4 text-3xl font-bold text-slate-800">
+                    00:00:00
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const clockElement = document.getElementById('clock');
+            const dateElement = document.getElementById('date');
+            const dayElement = document.getElementById('day');
+            const formatToggleBtn = document.getElementById('format-toggle');
+            const setAlarmBtn = document.getElementById('set-alarm');
+            const alarmTimeInput = document.getElementById('alarm-time');
+            const alarmStatus = document.getElementById('alarm-status');
+            const timerHoursInput = document.getElementById('timer-hours');
+            const timerMinutesInput = document.getElementById('timer-minutes');
+            const timerSecondsInput = document.getElementById('timer-seconds');
+            const startTimerBtn = document.getElementById('start-timer');
+            const resetTimerBtn = document.getElementById('reset-timer');
+            const timerDisplay = document.getElementById('timer-display');
+
+            // Tab functionality
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabPanels = document.querySelectorAll('.tab-panel');
+
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const targetPanelId = button.id.replace('tab-', '') + '-panel';
+                    
+                    // Remove 'active' class from all buttons and panels
+                    tabButtons.forEach(btn => {
+                        btn.classList.remove('active', 'bg-indigo-500', 'text-white');
+                        btn.classList.add('bg-slate-200', 'text-slate-700', 'hover:bg-slate-300');
+                    });
+                    tabPanels.forEach(panel => {
+                        panel.classList.remove('active');
+                    });
+
+                    // Add 'active' class to the clicked button and its corresponding panel
+                    button.classList.add('active', 'bg-indigo-500', 'text-white');
+                    button.classList.remove('bg-slate-200', 'text-slate-700', 'hover:bg-slate-300');
+                    document.getElementById(targetPanelId).classList.add('active');
+                });
+            });
+
+            // Sound function
+            function playBeepSound() {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+
+                oscillator.type = 'sine'; // A sine wave sounds like a simple beep
+                oscillator.frequency.setValueAtTime(440, audioContext.currentTime); // Frequency in hertz (A4 note)
+                gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+                gainNode.gain.linearRampToValueAtTime(1, audioContext.currentTime + 0.01);
+                gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.5);
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.5);
+
+                setTimeout(() => {
+                    const oscillator2 = audioContext.createOscillator();
+                    const gainNode2 = audioContext.createGain();
+                    oscillator2.type = 'sine';
+                    oscillator2.frequency.setValueAtTime(440, audioContext.currentTime);
+                    gainNode2.gain.setValueAtTime(0, audioContext.currentTime);
+                    gainNode2.gain.linearRampToValueAtTime(1, audioContext.currentTime + 0.01);
+                    gainNode2.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.5);
+                    oscillator2.connect(gainNode2);
+                    gainNode2.connect(audioContext.destination);
+                    oscillator2.start(audioContext.currentTime + 0.1);
+                    oscillator2.stop(audioContext.currentTime + 0.6);
+                }, 1000); // Play second beep after 1 second
+            }
+
+            // Time Format Logic (with cookies)
+            let is12HourFormat = getCookie('timeFormat') === '12h';
+            
+            function getCookie(name) {
+                const nameEQ = name + "=";
+                const ca = document.cookie.split(';');
+                for (let i = 0; i < ca.length; i++) {
+                    let c = ca[i];
+                    while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+                    if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+                }
+                return null;
+            }
+
+            function setCookie(name, value, days) {
+                const d = new Date();
+                d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000));
+                const expires = "expires=" + d.toUTCString();
+                document.cookie = name + "=" + value + ";" + expires + ";path=/";
+            }
+
+            function updateTime() {
+                const now = new Date();
+                
+                // Format the time based on the current setting
+                const options = {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: is12HourFormat
+                };
+                const formattedTime = now.toLocaleTimeString('en-US', options);
+                clockElement.textContent = formattedTime;
+
+                // Format the date
+                const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                const formattedDate = now.toLocaleDateString('en-US', dateOptions);
+                const [day, ...dateParts] = formattedDate.split(', ');
+                dayElement.textContent = day;
+                dateElement.textContent = dateParts.join(', ');
+
+                // Alarm check
+                if (alarmTime) {
+                    const alarmDate = new Date();
+                    const [alarmHours, alarmMinutes] = alarmTime.split(':');
+                    
+                    if (now.getHours() == alarmHours && now.getMinutes() == alarmMinutes && now.getSeconds() === 0) {
+                        playBeepSound();
+                        alarmTime = null; // Reset alarm after it goes off
+                        alarmStatus.textContent = "Alarm complete!";
+                        setAlarmBtn.textContent = "Set";
+                    }
+                }
+            }
+
+            // Alarm Logic
+            let alarmTime = null;
+            setAlarmBtn.addEventListener('click', () => {
+                if (alarmTimeInput.value) {
+                    if (alarmTime) {
+                        // Cancel existing alarm
+                        alarmTime = null;
+                        alarmStatus.textContent = "Alarm cancelled.";
+                        setAlarmBtn.textContent = "Set";
+                        alarmTimeInput.value = "";
+                    } else {
+                        // Set new alarm
+                        alarmTime = alarmTimeInput.value;
+                        alarmStatus.textContent = `Alarm set for ${alarmTime}.`;
+                        setAlarmBtn.textContent = "Cancel";
+                    }
+                } else {
+                     alarmStatus.textContent = "Please set a time for the alarm.";
+                }
+            });
+
+            // Timer Logic
+            let timerInterval;
+            let totalSeconds;
+            let isTimerRunning = false;
+
+            function formatTimer(seconds) {
+                const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+                const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+                const s = (seconds % 60).toString().padStart(2, '0');
+                return `${h}:${m}:${s}`;
+            }
+
+            startTimerBtn.addEventListener('click', () => {
+                if (!isTimerRunning) {
+                    const h = parseInt(timerHoursInput.value) || 0;
+                    const m = parseInt(timerMinutesInput.value) || 0;
+                    const s = parseInt(timerSecondsInput.value) || 0;
+                    
+                    if (totalSeconds === undefined) {
+                        totalSeconds = h * 3600 + m * 60 + s;
+                    }
+                    
+                    if (totalSeconds > 0) {
+                        isTimerRunning = true;
+                        startTimerBtn.textContent = "Pause";
+                        timerInterval = setInterval(() => {
+                            totalSeconds--;
+                            timerDisplay.textContent = formatTimer(totalSeconds);
+                            if (totalSeconds <= 0) {
+                                clearInterval(timerInterval);
+                                isTimerRunning = false;
+                                playBeepSound();
+                                timerDisplay.textContent = "Time's up!";
+                                startTimerBtn.textContent = "Start";
+                            }
+                        }, 1000);
+                    }
+                } else {
+                    clearInterval(timerInterval);
+                    isTimerRunning = false;
+                    startTimerBtn.textContent = "Resume";
+                }
+            });
+
+            resetTimerBtn.addEventListener('click', () => {
+                clearInterval(timerInterval);
+                isTimerRunning = false;
+                totalSeconds = undefined;
+                timerDisplay.textContent = "00:00:00";
+                startTimerBtn.textContent = "Start";
+                timerHoursInput.value = "";
+                timerMinutesInput.value = "";
+                timerSecondsInput.value = "";
+            });
+
+            // Event Listeners
+            formatToggleBtn.addEventListener('click', () => {
+                is12HourFormat = !is12HourFormat;
+                setCookie('timeFormat', is12HourFormat ? '12h' : '24h', 365);
+                formatToggleBtn.textContent = `Switch to ${is12HourFormat ? '24' : '12'}-hour`;
+                updateTime();
+            });
+
+            // Initial setup
+            updateTime();
+            setInterval(updateTime, 1000);
+            formatToggleBtn.textContent = `Switch to ${is12HourFormat ? '24' : '12'}-hour`;
+        });
+    </script>
+</body>
+</html>
