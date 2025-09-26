@@ -190,6 +190,49 @@
         .settings-content .option { margin-bottom: 10px; }
         .settings-content input[type="text"] { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); }
         .settings-content button { padding: 8px 15px; border-radius: 6px; border: none; background-color: #007aff; color: white; cursor: pointer; margin-top: 5px; }
+        
+        /* Browser-specific styles */
+        .browser-body {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+            padding: 0;
+        }
+        .browser-toolbar {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background-color: rgba(230, 230, 230, 0.7);
+            border-bottom: 1px solid var(--border-color);
+            gap: 5px;
+            flex-shrink: 0;
+        }
+        .browser-toolbar input[type="text"] {
+            flex-grow: 1;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+        }
+        .browser-toolbar button {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 8px;
+            background-color: #007aff;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        .browser-toolbar button:hover {
+            background-color: #005bb5;
+        }
+        .browser-iframe {
+            flex-grow: 1;
+            width: 100%;
+            border: none;
+        }
 
         /* --- 6. Custom Context Menu --- */
         #contextMenu {
@@ -265,9 +308,11 @@
         const contextMenu = document.getElementById('contextMenu');
 
         const APPS = [
+            // The sourceUrl for each app is now specified here.
             { id: 'browser', name: 'Browser', icon: 'fa-solid fa-globe', color: '#3498db' },
-            { id: 'notes', name: 'Notes', icon: 'fa-solid fa-clipboard', color: '#f1c40f' },
-            { id: 'settings', name: 'Settings', icon: 'fa-solid fa-gears', color: '#95a5a6' },
+            { id: 'notes', name: 'Notes', icon: 'fa-solid fa-clipboard', color: '#f1c40f', sourceUrl: 'https://raw.githubusercontent.com/Mahi902/Aurora/main/notes.html' },
+            { id: 'settings', name: 'Settings', icon: 'fa-solid fa-gears', color: '#95a5a6', sourceUrl: 'https://raw.githubusercontent.com/Mahi902/Aurora/main/settings.html' },
+            { id: 'example', name: 'Example App', icon: 'fa-solid fa-code', color: '#1abc9c', sourceUrl: 'https://raw.githubusercontent.com/Mahi902/Aurora/main/example.html' },
             { id: 'files', name: 'Files', icon: 'fa-solid fa-folder', color: '#e67e22' },
             { id: 'terminal', name: 'Terminal', icon: 'fa-solid fa-terminal', color: '#2ecc71' },
             { id: 'calculator', name: 'Calculator', icon: 'fa-solid fa-calculator', color: '#34495e' },
@@ -325,6 +370,29 @@
             document.getElementById(`taskbar-icon-${appWindow.dataset.appId}`).classList.add('active');
         }
 
+        async function fetchAppCode(url, appId) {
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`Failed to load app: ${response.statusText}`);
+                }
+                const htmlContent = await response.text();
+                const windowBody = document.querySelector(`#window-${appId} .app-body-container`);
+                if (windowBody) {
+                    windowBody.innerHTML = htmlContent;
+                }
+            } catch (error) {
+                console.error(`Error fetching app code for ${appId}:`, error);
+                const windowBody = document.querySelector(`#window-${appId} .app-body-container`);
+                if (windowBody) {
+                    windowBody.innerHTML = `<div style="text-align: center; color: #e74c3c;">
+                                                <p>Failed to load app content.</p>
+                                                <p>Error: ${error.message}</p>
+                                            </div>`;
+                }
+            }
+        }
+
         function launchApp(appId) {
             const existingWindow = document.getElementById(`window-${appId}`);
             if (existingWindow) {
@@ -342,6 +410,12 @@
             appWindow.style.left = `${Math.random() * 200 + 50}px`;
             appWindow.style.top = `${Math.random() * 100 + 50}px`;
             
+            // For the browser app, make the window a bit larger by default
+            if (appId === 'browser') {
+                appWindow.style.width = '800px';
+                appWindow.style.height = '600px';
+            }
+
             appWindow.innerHTML = `
                 <div class="window-header">
                     <span class="window-title"><i class="${appData.icon}"></i> ${appData.name}</span>
@@ -351,7 +425,11 @@
                         <button class="close-btn" title="Close"><i class="fa-solid fa-xmark"></i></button>
                     </div>
                 </div>
-                <div class="window-body">${getAppContent(appId)}</div>
+                <div class="window-body">
+                    <div class="app-body-container">
+                        ${getAppContent(appId)}
+                    </div>
+                </div>
             `;
             
             windowContainer.appendChild(appWindow);
@@ -403,18 +481,31 @@
             // Add focus listener to the window itself
             appWindow.addEventListener('mousedown', () => focusWindow(appWindow));
 
-            // Settings app specific logic
-            if (appId === 'settings') {
-                const changeBgBtn = appWindow.querySelector('#changeBgBtn');
-                const newBgUrlInput = appWindow.querySelector('#newBgUrl');
-                changeBgBtn.addEventListener('click', () => {
-                    const url = newBgUrlInput.value.trim();
-                    if (url) {
-                        desktop.style.backgroundImage = `url(${url})`;
-                    } else {
-                        setWallpaper();
+            // Logic to fetch and load app content
+            if (appData.sourceUrl) {
+                fetchAppCode(appData.sourceUrl, appId);
+            } else if (appId === 'browser') {
+                // Browser-specific logic remains the same
+                const urlInput = appWindow.querySelector('#urlInput');
+                const goBtn = appWindow.querySelector('#goBtn');
+                const browserFrame = appWindow.querySelector('#browserFrame');
+                
+                const navigate = () => {
+                    let url = urlInput.value.trim();
+                    if (!url.match(/^(http|https):\/\//)) {
+                        url = 'https://' + url;
+                    }
+                    browserFrame.src = url;
+                };
+
+                urlInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        navigate();
                     }
                 });
+                goBtn.addEventListener('click', navigate);
+                
+                browserFrame.src = "https://www.google.com";
             }
         }
         
@@ -430,8 +521,21 @@
 
         function getAppContent(appId) {
             switch(appId) {
-                case 'settings': return `<div class="settings-content"><h3>Appearance</h3><div class="option"><label for="newBgUrl">Custom Wallpaper URL</label><input type="text" id="newBgUrl" placeholder="Paste image URL here..."></div><button id="changeBgBtn">Apply Wallpaper</button><p style="font-size:12px; margin-top:10px;">Leave blank and click apply for a random one.</p></div>`;
-                case 'notes': return `<textarea style="width:100%; height:100%; border:none; resize:none; background:transparent; font-family: 'Inter', sans-serif; font-size: 16px;" placeholder="Start typing your notes..."></textarea>`;
+                case 'browser':
+                    return `
+                        <div class="browser-body">
+                            <div class="browser-toolbar">
+                                <input type="text" id="urlInput" placeholder="Enter URL or search...">
+                                <button id="goBtn"><i class="fa-solid fa-arrow-right"></i></button>
+                            </div>
+                            <iframe id="browserFrame" class="browser-iframe" allow="clipboard-read; clipboard-write"></iframe>
+                        </div>
+                    `;
+                // The following apps are now loaded dynamically.
+                case 'settings':
+                case 'notes':
+                case 'example':
+                    return `<p style="text-align: center;">Loading app...</p>`;
                 default: return `<p>This is the <strong>${appId}</strong> application. Functionality can be built here.</p>`;
             }
         }
