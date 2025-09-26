@@ -812,14 +812,17 @@
             desktop.style.backgroundImage = `linear-gradient(135deg, ${color1} 0%, ${color2} 100%)`;
         }
 
+
         function setWallpaper() {
-            if (customWallpaper) {
-                desktopCanvas.style.display = 'none';
-                desktop.style.backgroundImage = `url('${customWallpaper}')`;
-            } else {
-                generateGradientWallpaper();
-            }
+    desktopCanvas.style.display = 'none';
+    // Set background to URL if customWallpaper exists, otherwise set to an empty string.
+    desktop.style.backgroundImage = customWallpaper ? `url('${customWallpaper}')` : ''; 
+    
+    // If customWallpaper is not set (i.e., null or empty string), generate the gradient.
+    if (!customWallpaper) generateGradientWallpaper();
         }
+        
+        
 
         function updateClock() {
             clockElement.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
