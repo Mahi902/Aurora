@@ -1,242 +1,291 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculator</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-    <style>
-        /* Embed styles directly for simplicity */
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f0f2f5;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh; /* Use 100vh to ensure it fills the iframe height */
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
+	<title>Calculator</title>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/10.6.4/math.js"
+		integrity="sha512-BbVEDjbqdN3Eow8+empLMrJlxXRj5nEitiCAK5A1pUr66+jLVejo3PmjIaucRnjlB0P9R3rBUs3g5jXc8ti+fQ=="
+		crossorigin="anonymous" referrerpolicy="no-referrer">
+	</script>
+	<style>
+		/* Minimalist White Theme Styles - Optimized for PC Landscape */
+		body {
+			/* Full white background, centered content */
+			background-color: white; 
+			color: #3C4043;
+			font-family: 'Google Sans', Arial, sans-serif;
+			margin: 0;
+			padding: 0;
+			min-height: 100vh;
+			display: flex;
+			align-items: center; /* Center horizontally */
+			justify-content: center; /* Center vertically */
+		}
+
+		form {
+		    /* Ensure the form doesn't interfere with body centering */
+		    display: contents; 
+		}
+
+		table {
+			border: none;
+			background-color: white;
+			border-radius: 10px;
+			padding: 10px;
+			width: 600px; /* Base width for landscape */
+			max-width: 90%; 
+			/* Use border-spacing to create consistent gaps between buttons */
+			border-spacing: 5px; 
+			border-collapse: separate;
+		}
+
+		/* Button Cell (td) Styling to control button placement */
+		table td {
+		    padding: 0; /* Remove default padding */
+		    width: 16.66%; /* 100% / 6 columns */
+		    max-width: 90px;
+		}
+		
+		/* Display Cell */
+		table tr:first-child td {
+		    width: 100%;
+		    padding: 5px 0 10px 0;
+		}
+
+		input[type="button"] {
+			/* Sizing for perfect circles within the cell */
+			width: 55px;
+			height: 55px;
+			padding: 0;
+			font-size: 18px;
+			font-weight: 500;
+			border: none;
+			border-radius: 50%; /* Ensure button is circular */
+			margin: 0 auto; /* Center button within the cell */
+			display: block; /* Allows margin: 0 auto to work */
+			cursor: pointer;
+			transition: background-color 0.15s;
+			text-align: center;
+			line-height: 55px; /* Vertically center text if height is 55px */
+		}
+		
+		input[type="button"]:focus {
+		    outline: none;
+		}
+
+		input[type="button"]:hover {
+			background-color: #F8F9FA;
+		}
+
+		input[type="button"]:active {
+			background-color: #E8EAED;
+		}
+
+		/* Button Styles */
+		input[type="button"].number {
+			background-color: #F1F3F4; /* Light gray background for numbers/main operators */
+			color: #202124;
+		}
+		
+		input[type="button"].secondary-operator {
+			background-color: white;
+			color: #1A73E8; /* Google's primary blue for functions */
+			font-weight: normal;
+		}
+
+		input[type="button"].operator {
+			background-color: #F1F3F4;
+			color: #1A73E8;
+			font-weight: 500;
+		}
+
+		input[type="button"].special-operator {
+			background-color: #F1F3F4;
+			color: #EA4335; /* Red for clear/delete */
+			font-weight: 500;
+		}
+		
+		input[type="button"][value="="] {
+		    background-color: #1A73E8;
+		    color: white;
+		}
+		
+		input[type="button"][value="="]:hover {
+		    background-color: #1765c0;
+		}
+
+
+		/* Display Style */
+		input[type="text"] {
+			width: 100%; 
+			padding: 15px 10px;
+			font-size: 30px;
+			font-weight: 400;
+			border: none;
+			border-radius: 5px;
+			background-color: white;
+			color: #202124;
+			text-align: right;
+			margin-bottom: 10px;
+			box-shadow: 0 1px 6px 0 rgba(32, 33, 36, 0.08); /* Re-added subtle shadow for display only */
+		}
+
+		/* Remove the unnecessary overlay styles */
+        #answerOverlay {
+            display: none;
         }
 
-        .calculator {
-            width: 300px;
-            background-color: #fff;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            border-radius: 15px;
-            padding: 20px;
-        }
-
-        #display {
-            width: 100%;
-            height: 70px;
-            background-color: #1a1a1a;
-            color: #fff;
-            font-size: 2.5em;
-            text-align: right;
-            padding: 10px;
-            border: none;
-            border-radius: 10px;
-            margin-bottom: 15px;
-            box-sizing: border-box;
-            overflow: hidden;
-        }
-
-        .buttons {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
-        }
-
-        button {
-            height: 60px;
-            font-size: 1.5em;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: background-color 0.15s ease;
-        }
-
-        /* Number and Decimal Buttons */
-        button:not(.operator):not(.clear):not(.equals) {
-            background-color: #e0e0e0;
-            color: #333;
-        }
-        button:not(.operator):not(.clear):not(.equals):hover {
-            background-color: #d1d1d1;
-        }
-
-        /* Operator Buttons */
-        .operator {
-            background-color: #ff9500;
-            color: #fff;
-        }
-        .operator:hover {
-            background-color: #e08500;
-        }
-
-        /* Clear Button (AC) */
-        .clear {
-            background-color: #ff3b30;
-            color: #fff;
-        }
-        .clear:hover {
-            background-color: #e0352b;
-        }
-
-        /* Equals Button */
-        .equals {
-            background-color: #4cd964;
-            color: #fff;
-            grid-column: span 2; /* Span two columns */
-        }
-        .equals:hover {
-            background-color: #40c055;
-        }
-    </style>
+	</style>
 </head>
 <body>
+	<form>
+		<table>
+			<tr>
+				<td colspan="6">
+					<input id="display" type="text" readonly>
+				</td>
+			</tr>
+			<tr>
+				<td><input type="button" value="1" class="number" onclick="appendToDisplay('1')"></td>
+				<td><input type="button" value="2" class="number" onclick="appendToDisplay('2')"></td>
+				<td><input type="button" value="3" class="number" onclick="appendToDisplay('3')"></td>
+				<td><input type="button" value="C" class="special-operator" onclick="clearDisplay()"></td>
+				<td><input type="button" value="⌫" class="special-operator" onclick="backspace()"></td>
+				<td><input type="button" value="=" class="number" onclick="calculateAndShow()"></td>
+			</tr>
+			<tr>
+				<td><input type="button" value="4" class="number" onclick="appendToDisplay('4')"></td>
+				<td><input type="button" value="5" class="number" onclick="appendToDisplay('5')"></td>
+				<td><input type="button" value="6" class="number" onclick="appendToDisplay('6')"></td>
+				<td><input type="button" value="-" class="operator" onclick="appendToDisplay('-')"></td>
+				<td><input type="button" value="%" class="operator" onclick="appendToDisplay('%')"></td>
+				<td><input type="button" value="cos" class="secondary-operator" onclick="appendToDisplay('cos(')"></td>
+			</tr>
+			<tr>
+				<td><input type="button" value="7" class="number" onclick="appendToDisplay('7')"></td>
+				<td><input type="button" value="8" class="number" onclick="appendToDisplay('8')"></td>
+				<td><input type="button" value="9" class="number" onclick="appendToDisplay('9')"></td>
+				<td><input type="button" value="×" class="operator" onclick="appendToDisplay('*')"></td>
+				<td><input type="button" value="!" class="operator" onclick="appendToDisplay('!')"></td>
+				<td><input type="button" value="sin" class="secondary-operator" onclick="appendToDisplay('sin(')"></td>
+			</tr>
+			<tr>
+				<td><input type="button" value="." class="number" onclick="appendToDisplay('.')"></td>
+				<td><input type="button" value="0" class="number" onclick="appendToDisplay('0')"></td>
+				<td><input type="button" value="," class="secondary-operator" onclick="appendToDisplay(',')"></td>
+				<td><input type="button" value="+" class="operator" onclick="appendToDisplay('+')"></td>
+				<td><input type="button" value="÷" class="operator" onclick="appendToDisplay('/')"></td>
+				<td><input type="button" value="tan" class="secondary-operator" onclick="appendToDisplay('tan(')"></td>
+			</tr>
+			<tr>
+				<td><input type="button" value="E" class="secondary-operator" onclick="e()"></td>
+				<td><input type="button" value="pi" class="secondary-operator" onclick="pi()"></td>
+				<td><input type="button" value="^" class="secondary-operator" onclick="power()"></td>
+				<td><input type="button" value="(" class="secondary-operator" onclick="appendToDisplay('(')"></td>
+				<td><input type="button" value=")" class="secondary-operator" onclick="appendToDisplay(')')"></td>
+				<td><input type="button" value="log" class="secondary-operator" onclick="base10Log()"></td>
+			</tr>
+			<tr>
+				<td><input type="button" value="sqrt" class="secondary-operator" onclick="squareRoot()"></td>
+				<td><input type="button" value="ln2" class="secondary-operator" onclick="appendToDisplay(Math.LN2)"></td>
+				<td><input type="button" value="log10" class="secondary-operator" onclick="base10Log()"></td>
+				<td><input type="button" value="l2e" class="secondary-operator" onclick="appendToDisplay(Math.LOG2E)"></td>
+				<td><input type="button" value="l10e" class="secondary-operator" onclick="appendToDisplay(Math.LOG10E)"></td>
+				<td><input type="button" value="exp" class="secondary-operator" onclick="appendToDisplay('exp(')"></td>
+			</tr>
+		</table>
+	</form>
 
-<div class="calculator">
-    <div id="display">0</div>
-    <div class="buttons">
-        <button class="clear">AC</button>
-        <button class="operator" data-value="%">&percnt;</button>
-        <button class="operator" data-value="/">&divide;</button>
-        <button data-value="7">7</button>
-        <button data-value="8">8</button>
-        <button data-value="9">9</button>
-        <button class="operator" data-value="*">&times;</button>
-        <button data-value="4">4</button>
-        <button data-value="5">5</button>
-        <button data-value="6">6</button>
-        <button class="operator" data-value="-">&minus;</button>
-        <button data-value="1">1</button>
-        <button data-value="2">2</button>
-        <button data-value="3">3</button>
-        <button class="operator" data-value="+">&plus;</button>
-        <button data-value="0">0</button>
-        <button data-value=".">.</button>
-        <button class="equals" data-value="=">&equals;</button>
-    </div>
-</div>
+	<script>
+		const display = document.getElementById("display");
+		// Removed answerOverlay and timeout variables
 
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const display = document.getElementById('display');
-        const buttons = document.querySelectorAll('.buttons button');
-        let currentInput = '0';
-        let operator = null;
-        let previousInput = null;
-        let waitingForNewInput = false;
+		function appendToDisplay(value) {
+		    if (display.value === "Error" || display.value === "Infinity") {
+		        display.value = "";
+		    }
+			display.value += value;
+		}
+		
+		function clearDisplay() {
+		    display.value = "";
+		}
 
-        const calculate = (a, op, b) => {
-            a = parseFloat(a);
-            b = parseFloat(b);
-            if (isNaN(a) || isNaN(b)) return b;
+		function backspace() {
+			display.value = display.value.slice(0, -1);
+		}
 
-            switch (op) {
-                case '+': return a + b;
-                case '-': return a - b;
-                case '*': return a * b;
-                case '/': return a / b;
-                case '%': return a % b; // Simple modulo operation
-                default: return b;
-            }
-        };
+		function calculate() {
+			let expression = display.value;
+			let result;
 
-        const handleNumber = (value) => {
-            if (waitingForNewInput) {
-                currentInput = value;
-                waitingForNewInput = false;
-            } else {
-                currentInput = currentInput === '0' ? value : currentInput + value;
-            }
-            display.textContent = currentInput;
-        };
+			try {
+				result = math.evaluate(expression);
 
-        const handleDecimal = () => {
-            if (waitingForNewInput) {
-                currentInput = '0.';
-                waitingForNewInput = false;
-            } else if (!currentInput.includes('.')) {
-                currentInput += '.';
-            }
-            display.textContent = currentInput;
-        };
+				if (typeof result === 'number' && !Number.isInteger(result) && result.toString().length > 15) {
+				    result = result.toFixed(10);
+				}
+				
+				if (typeof result !== 'number' && typeof result !== 'string') {
+				    result = result.toString();
+				}
 
-        const handleOperator = (nextOperator) => {
-            const inputValue = parseFloat(currentInput);
+				return result;
 
-            if (previousInput === null) {
-                previousInput = inputValue;
-            } else if (!waitingForNewInput) {
-                const result = calculate(previousInput, operator, inputValue);
-                currentInput = String(result);
-                display.textContent = currentInput;
-                previousInput = result;
-            }
-
-            waitingForNewInput = true;
-            operator = nextOperator;
-        };
-
-        const handleEquals = () => {
-            if (previousInput === null || operator === null) return;
-            
-            // If the user hits = repeatedly, it should use the previous operand (b)
-            const inputValue = waitingForNewInput ? previousInput : parseFloat(currentInput);
-            const secondOperand = waitingForNewInput ? (previousInput / previousInput) : parseFloat(currentInput); 
-            
-            const result = calculate(previousInput, operator, secondOperand);
-            
-            currentInput = String(result);
-            display.textContent = currentInput;
-            previousInput = result;
-            waitingForNewInput = true;
-            operator = null; // Reset operator after equals
-        };
+			} catch (error) {
+				console.error("Calculation error:", error);
+				return "Error";
+			}
+		}
         
-        const handleAC = () => {
-            currentInput = '0';
-            operator = null;
-            previousInput = null;
-            waitingForNewInput = false;
-            display.textContent = currentInput;
-        };
+        // REMOVED: The showAnswer function is deleted as requested
+        
+		function calculateAndShow() {
+		    const result = calculate();
+		    // Now the result is just written directly to the display
+		    display.value = result;
+		}
 
+		function squareRoot() {
+			appendToDisplay("sqrt(");
+		}
 
-        buttons.forEach(button => {
-            button.addEventListener('click', () => {
-                const value = button.getAttribute('data-value') || button.textContent.trim();
-                
-                if (button.classList.contains('clear')) {
-                    handleAC();
-                } else if (button.classList.contains('operator')) {
-                    handleOperator(value);
-                } else if (button.classList.contains('equals')) {
-                    // Reusing the calculation logic in a simpler way for equals
-                    if (operator && previousInput !== null) {
-                        const result = calculate(previousInput, operator, parseFloat(currentInput));
-                        currentInput = String(result);
-                        display.textContent = currentInput;
-                        previousInput = null;
-                        operator = null;
-                        waitingForNewInput = true;
-                    }
-                } else if (value === '.') {
-                    handleDecimal();
-                } else {
-                    handleNumber(value);
+		function base10Log() {
+			appendToDisplay("log10(");
+		}
+
+		function pi() {
+			appendToDisplay("pi");
+		}
+
+		function e() {
+			appendToDisplay("e");
+		}
+
+		function power() {
+			appendToDisplay("^");
+		}
+	
+        // Keyboard Listener
+        document.addEventListener("DOMContentLoaded", function () {
+            
+            document.addEventListener("keydown", function (event) {
+                // Removed all code related to answerOverlay cleanup
+
+                if (event.key.match(/[0-9.+\-*/()%^]/)) {
+                    event.preventDefault();
+                    appendToDisplay(event.key);
+                } else if (event.key === "Enter") {
+                    event.preventDefault();
+                    calculateAndShow();
+                } else if (event.key === "Backspace") {
+                    event.preventDefault();
+                    backspace();
+                } else if (event.key === "Escape") {
+                    event.preventDefault();
+                    clearDisplay();
                 }
             });
         });
-
-        // Initialize the display
-        display.textContent = currentInput;
-    });
-</script>
+	</script>
 </body>
 </html>
