@@ -163,6 +163,7 @@
             left: 15px;
             width: 400px;
             max-height: 500px;
+            overflow-y: auto;
             background: var(--bar-background);
             backdrop-filter: blur(var(--bar-blur));
             border-radius: 12px;
@@ -888,6 +889,149 @@
         window.addEventListener('resize', setWallpaper);
     });
     </script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const homeScreenGrid = document.getElementById("homeScreenGrid");
+    const appGrid = document.getElementById("appGrid");
+
+    // Load & save apps
+    let homeScreenApps = JSON.parse(localStorage.getItem("homeScreenApps")) || [];
+    function saveHomeScreenApps() {
+        localStorage.setItem("homeScreenApps", JSON.stringify(homeScreenApps));
+    }
+
+    // Context menu setup
+    const appContextMenu = document.createElement("ul");
+    appContextMenu.id = "appContextMenu";
+    appContextMenu.style.position = "fixed";
+    appContextMenu.style.display = "none";
+    appContextMenu.style.listStyle = "none";
+    appContextMenu.style.padding = "6px 0";
+    appContextMenu.style.background = "rgba(255,255,255,0.95)";
+    appContextMenu.style.border = "1px solid #ccc";
+    appContextMenu.style.borderRadius = "8px";
+    appContextMenu.style.boxShadow = "0 4px 12px rgba(0,0,0,0.1)";
+    appContextMenu.style.zIndex = "20000";
+    document.body.appendChild(appContextMenu);
+
+    let currentTargetApp = null;
+
+    function showContextMenu(e, appId, inHomeScreen) {
+        e.preventDefault();
+        currentTargetApp = { appId, inHomeScreen };
+        appContextMenu.innerHTML = "";
+
+        const option = document.createElement("li");
+        option.textContent = inHomeScreen ? "Remove from Home Screen" : "Add to Home Screen";
+        option.style.padding = "8px 16px";
+        option.style.cursor = "pointer";
+        option.onmouseenter = () => option.style.background = "#eee";
+        option.onmouseleave = () => option.style.background = "transparent";
+        option.onclick = () => {
+            if (inHomeScreen) {
+                // Remove app
+                homeScreenApps = homeScreenApps.filter(id => id !== appId);
+            } else {
+                // Add app
+                if (!homeScreenApps.includes(appId)) {
+                    homeScreenApps.push(appId);
+                }
+            }
+            saveHomeScreenApps();
+            renderHomeScreenApps();
+            hideContextMenu();
+        };
+        appContextMenu.appendChild(option);
+
+        appContextMenu.style.left = e.clientX + "px";
+        appContextMenu.style.top = e.clientY + "px";
+        appContextMenu.style.display = "block";
+    }
+
+    function hideContextMenu() {
+        appContextMenu.style.display = "none";
+    }
+
+    document.addEventListener("click", hideContextMenu);
+
+    // Drag + Drop for home screen apps
+    function enableDragDrop(container) {
+        container.querySelectorAll(".home-screen-app").forEach(appIcon => {
+            appIcon.draggable = true;
+
+            appIcon.addEventListener("dragstart", (e) => {
+                e.dataTransfer.setData("text/plain", appIcon.dataset.appId);
+            });
+        });
+
+        container.ondragover = (e) => e.preventDefault();
+        container.ondrop = (e) => {
+            e.preventDefault();
+            const draggedAppId = e.dataTransfer.getData("text/plain");
+            const target = e.target.closest(".home-screen-app");
+
+            if (draggedAppId && target) {
+                const draggedIndex = homeScreenApps.indexOf(draggedAppId);
+                const targetIndex = homeScreenApps.indexOf(target.dataset.appId);
+
+                if (draggedIndex > -1 && targetIndex > -1) {
+                    // Swap apps
+                    [homeScreenApps[draggedIndex], homeScreenApps[targetIndex]] =
+                        [homeScreenApps[targetIndex], homeScreenApps[draggedIndex]];
+
+                    saveHomeScreenApps();
+                    renderHomeScreenApps();
+                }
+            }
+        };
+    }
+
+    // Re-render Home Screen apps
+    function renderHomeScreenApps() {
+        homeScreenGrid.innerHTML = "";
+        homeScreenApps.forEach(appId => {
+            const menuApp = appGrid.querySelector(`[data-app-id="${appId}"]`);
+            if (!menuApp) return;
+            const appIcon = menuApp.cloneNode(true);
+            appIcon.classList.remove("app-icon");
+            appIcon.classList.add("home-screen-app");
+
+            // Right-click / long press
+            appIcon.addEventListener("contextmenu", (e) => showContextMenu(e, appId, true));
+            appIcon.addEventListener("touchstart", (e) => {
+                e.preventDefault();
+                setTimeout(() => showContextMenu(e, appId, true), 600); // long press
+            });
+
+            homeScreenGrid.appendChild(appIcon);
+        });
+        enableDragDrop(homeScreenGrid);
+    }
+
+    // Add context menu to app grid items
+    new MutationObserver(() => {
+        appGrid.querySelectorAll(".app-icon").forEach(appIcon => {
+            if (!appIcon.dataset.contextReady) {
+                const appId = appIcon.dataset.appId;
+                appIcon.dataset.contextReady = "true";
+
+                appIcon.addEventListener("contextmenu", (e) => showContextMenu(e, appId, false));
+                appIcon.addEventListener("touchstart", (e) => {
+                    e.preventDefault();
+                    setTimeout(() => showContextMenu(e, appId, false), 600);
+                });
+            }
+        });
+    }).observe(appGrid, { childList: true, subtree: true });
+
+    // Init
+    renderHomeScreenApps();
+});
+</script>
+
+
+
 </body>
 </html>
 
