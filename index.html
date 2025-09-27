@@ -799,29 +799,43 @@
             window.addEventListener('resize', setWallpaper);
         }
 
-        // Updated function to generate a random gradient wallpaper
-        function generateGradientWallpaper() {
-            const lightColors = [
-                '#a8e063', '#56ab2f', '#f7f070', '#e0c340', '#d3e2f5', '#b3d1f3',
-                '#e89589', '#d76d77', '#c0b4f0', '#958ad3', '#89e8e8', '#6de1d7',
-                '#f5e3a8', '#f3d6b3', '#a8e5a1', '#85d978'
-            ];
-            const color1 = lightColors[Math.floor(Math.random() * lightColors.length)];
-            const color2 = lightColors[Math.floor(Math.random() * lightColors.length)];
-            desktopCanvas.style.display = 'none';
-            desktop.style.backgroundImage = `linear-gradient(135deg, ${color1} 0%, ${color2} 100%)`;
-        }
+        // ... (inside the <script> tag)
+
+// Updated function to generate a random gradient wallpaper
+function generateGradientWallpaper() {
+    // Intentionally left empty or removed entirely, as per user request to remove gradient logic.
+    // If you need a simple, solid fallback color instead of a gradient:
+    // desktop.style.backgroundImage = 'none'; // Clear any previous image
+    // desktop.style.backgroundColor = '#f0f0f0'; // Set a default solid color
+}
+
+
+function setWallpaper() {
+    desktopCanvas.style.display = 'none';
+    
+    // Set background to URL if customWallpaper exists, otherwise set to an empty string.
+    desktop.style.backgroundImage = customWallpaper ? `url('${customWallpaper}')` : 'none';
+    
+    // Fallback: If no custom wallpaper is set, ensure a neutral background instead of a gradient.
+    if (!customWallpaper) {
+        desktop.style.backgroundColor = '#f0f0f0'; // A light gray solid color fallback
+    } else {
+        desktop.style.backgroundColor = 'transparent'; // Ensure background color doesn't show through the image
+    }
+}
+
+// ... (Rest of the script continues)
+
+// You should also remove this line if it's no longer necessary, 
+// since setWallpaper is being called initially and on user action (settings):
+// window.addEventListener('resize', setWallpaper);
 
 
         function setWallpaper() {
-            desktopCanvas.style.display = 'none';
-            // Set background to URL if customWallpaper exists, otherwise set to an empty string.
-            // The browser attempts to load the URL, which correctly overrides any previous gradient.
-            desktop.style.backgroundImage = customWallpaper ? `url('${customWallpaper}')` : ''; 
-            
-            // If customWallpaper is not set (i.e., null or empty string), *then* generate the gradient.
-            // This ensures the gradient is only applied when the desktop is meant to be at its default state.
-            if (!customWallpaper) generateGradientWallpaper();
+    desktopCanvas.style.display = 'none';
+    // Use the custom URL or set to 'none' (which respects the CSS body background if set, 
+    // but here will likely just show the default color from a previous state/CSS default).
+    desktop.style.backgroundImage = customWallpaper ? `url('${customWallpaper}')` : 'none'; 
         }
         
         
