@@ -390,6 +390,88 @@
         </div>
     </div>
 
+
+    <!-- Sidebar -->
+<div id="userSidebar">
+  <div class="sidebar-header">
+    <img id="sidebarAvatar" class="sidebar-avatar" alt="User">
+    <div class="sidebar-info">
+      <div id="sidebarName" class="sidebar-name"></div>
+      <div id="sidebarDateTime" class="sidebar-datetime"></div>
+      <div id="sidebarTimezone" class="sidebar-timezone"></div>
+    </div>
+  </div>
+</div>
+
+<style>
+  #userSidebar {
+    position: fixed;
+    top: 0;
+    right: -320px;
+    width: 320px;
+    height: 100%;
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(10px);
+    border-left: 1px solid #ccc;
+    box-shadow: -5px 0 20px rgba(0,0,0,0.1);
+    transition: right 0.3s ease;
+    z-index: 12000;
+    padding: 20px;
+    box-sizing: border-box;
+  }
+  #userSidebar.open { right: 0; }
+
+  .sidebar-header { display: flex; align-items: center; gap: 15px; }
+  .sidebar-avatar {
+    width: 70px; height: 70px;
+    border-radius: 50%;
+    border: 3px solid #007aff;
+    object-fit: cover;
+  }
+  .sidebar-info { flex: 1; }
+  .sidebar-name { font-weight: 600; font-size: 1.2rem; margin-bottom: 6px; }
+  .sidebar-datetime { font-size: 0.95rem; color: #444; margin-bottom: 4px; }
+  .sidebar-timezone { font-size: 0.85rem; color: #666; }
+</style>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const sidebar = document.getElementById("userSidebar");
+  const sidebarName = document.getElementById("sidebarName");
+  const sidebarDateTime = document.getElementById("sidebarDateTime");
+  const sidebarTimezone = document.getElementById("sidebarTimezone");
+  const sidebarAvatar = document.getElementById("sidebarAvatar");
+  const clockElement = document.getElementById("clock");
+
+  // Pull user info from lock screen / onboarding data
+  const lockScreenData = JSON.parse(localStorage.getItem("auroraLockScreenData") || "{}");
+  if (lockScreenData.name) sidebarName.textContent = lockScreenData.name;
+  if (lockScreenData.avatar) sidebarAvatar.src = lockScreenData.avatar;
+  else sidebarAvatar.src = "https://via.placeholder.com/80?text=User";
+
+  // Update live date & time
+  function updateSidebarTime() {
+    const now = new Date();
+    const options = { weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" };
+    sidebarDateTime.textContent = now.toLocaleString([], options);
+    sidebarTimezone.textContent = `Timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`;
+  }
+  updateSidebarTime();
+  setInterval(updateSidebarTime, 1000);
+
+  // Toggle sidebar on clock click
+  clockElement.addEventListener("click", () => sidebar.classList.toggle("open"));
+
+  // Close sidebar on outside click
+  document.addEventListener("click", (e) => {
+    if (!sidebar.contains(e.target) && e.target !== clockElement) {
+      sidebar.classList.remove("open");
+    }
+  });
+});
+</script>
+
+    
     <div id="appMenu">
         <input type="search" id="appSearch" placeholder="Search for apps...">
         <div id="appGrid"></div>
