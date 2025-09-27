@@ -890,3 +890,700 @@
     </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aurora Launcher Welcome</title>
+    <style>
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: #f5f5f5;
+            color: #333;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        /* Welcome overlay styles */
+        #welcome-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            transition: opacity 0.8s ease;
+        }
+        
+        .welcome-content {
+            text-align: center;
+            max-width: 500px;
+            padding: 40px;
+        }
+        
+        .welcome-logo {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: #4a6ee0;
+        }
+        
+        .welcome-title {
+            font-size: 2rem;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .welcome-subtitle {
+            font-size: 1.1rem;
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        .nav-arrow {
+            font-size: 2.5rem;
+            color: #4a6ee0;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: transform 0.3s ease;
+            animation: bounce 2s infinite;
+        }
+        
+        .nav-arrow:hover {
+            transform: scale(1.1);
+        }
+        
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0);
+            }
+            40% {
+                transform: translateY(-10px);
+            }
+            60% {
+                transform: translateY(-5px);
+            }
+        }
+        
+        /* Form styles */
+        .form-container {
+            width: 100%;
+            max-width: 400px;
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            color: #333;
+        }
+        
+        .form-title {
+            font-size: 1.6rem;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #4a6ee0;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #444;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        
+        .form-input:focus {
+            border-color: #4a6ee0;
+            outline: none;
+        }
+        
+        .pin-inputs {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        
+        .pin-input {
+            width: 60px;
+            height: 60px;
+            text-align: center;
+            font-size: 1.5rem;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: white;
+        }
+        
+        .pin-input.error {
+            border-color: #e74c3c;
+        }
+        
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background: #4a6ee0;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, opacity 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            opacity: 0.9;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            margin-top: 10px;
+        }
+        
+        /* Profile display */
+        .profile-display {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(74, 110, 224, 0.1);
+            border-radius: 10px;
+        }
+        
+        .profile-pic {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 15px;
+            border: 3px solid #4a6ee0;
+        }
+        
+        .profile-info {
+            flex: 1;
+        }
+        
+        .profile-name {
+            font-weight: 600;
+            font-size: 1.2rem;
+            margin-bottom: 5px;
+        }
+        
+        /* Loader */
+        .loader {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(74, 110, 224, 0.2);
+            border-radius: 50%;
+            border-top-color: #4a6ee0;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Forgot password */
+        .forgot-password {
+            text-align: center;
+            margin-top: 15px;
+            color: #e74c3c;
+            cursor: pointer;
+            text-decoration: underline;
+            display: none;
+        }
+        
+        .reset-warning {
+            background: rgba(231, 76, 60, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            color: #e74c3c;
+            text-align: center;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 600px) {
+            .welcome-logo {
+                font-size: 2rem;
+            }
+            
+            .welcome-title {
+                font-size: 1.6rem;
+            }
+            
+            .form-container {
+                padding: 20px;
+            }
+            
+            .pin-input {
+                width: 50px;
+                height: 50px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Welcome Overlay -->
+    <div id="welcome-overlay">
+        <!-- Welcome Screen -->
+        <div id="welcome-screen" class="welcome-content">
+            <div class="welcome-logo">Aurora Launcher</div>
+            <h1 class="welcome-title">Welcome New User</h1>
+            <p class="welcome-subtitle">Welcome to Aurora Launcher. You have to set up an account to continue.</p>
+            <div class="nav-arrow" id="welcome-arrow">➡</div>
+        </div>
+        
+        <!-- Setup Account Screen -->
+        <div id="setup-screen" class="form-container" style="display: none;">
+            <h2 class="form-title">Setup Account</h2>
+            <div class="form-group">
+                <label class="form-label" for="name-input">Your Name</label>
+                <input type="text" id="name-input" class="form-input" placeholder="Enter your name">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="avatar-input">Profile Picture URL</label>
+                <input type="text" id="avatar-input" class="form-input" placeholder="Enter image URL">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Set 4-digit PIN</label>
+                <div class="pin-inputs">
+                    <input type="password" maxlength="1" class="pin-input" id="pin1">
+                    <input type="password" maxlength="1" class="pin-input" id="pin2">
+                    <input type="password" maxlength="1" class="pin-input" id="pin3">
+                    <input type="password" maxlength="1" class="pin-input" id="pin4">
+                </div>
+            </div>
+            <button class="btn" id="setup-continue">Continue</button>
+        </div>
+        
+        <!-- Confirm PIN Screen -->
+        <div id="confirm-screen" class="form-container" style="display: none;">
+            <h2 class="form-title">Confirm PIN</h2>
+            <p class="welcome-subtitle">Please re-enter your 4-digit PIN for confirmation.</p>
+            <div class="pin-inputs">
+                <input type="password" maxlength="1" class="pin-input" id="confirm-pin1">
+                <input type="password" maxlength="1" class="pin-input" id="confirm-pin2">
+                <input type="password" maxlength="1" class="pin-input" id="confirm-pin3">
+                <input type="password" maxlength="1" class="pin-input" id="confirm-pin4">
+            </div>
+            <button class="btn" id="confirm-continue">Confirm</button>
+            <button class="btn btn-secondary" id="confirm-back">Back</button>
+        </div>
+        
+        <!-- Signing In Screen -->
+        <div id="signing-screen" class="welcome-content" style="display: none;">
+            <div class="welcome-logo">Aurora Launcher</div>
+            <h2 class="welcome-title">Signing you in</h2>
+            <div class="loader"></div>
+        </div>
+        
+        <!-- Sign-In Complete Screen -->
+        <div id="complete-screen" class="welcome-content" style="display: none;">
+            <div class="welcome-logo">Aurora Launcher</div>
+            <h2 class="welcome-title">Sign-In Complete!</h2>
+            <p class="welcome-subtitle">Welcome to Aurora Launcher</p>
+        </div>
+        
+        <!-- Login Screen -->
+        <div id="login-screen" class="form-container" style="display: none;">
+            <div class="profile-display">
+                <img id="login-avatar" class="profile-pic" src="" alt="Profile">
+                <div class="profile-info">
+                    <div class="profile-name" id="login-name">User</div>
+                    <div>Enter your PIN to continue</div>
+                </div>
+            </div>
+            <div class="pin-inputs">
+                <input type="password" maxlength="1" class="pin-input" id="login-pin1">
+                <input type="password" maxlength="1" class="pin-input" id="login-pin2">
+                <input type="password" maxlength="1" class="pin-input" id="login-pin3">
+                <input type="password" maxlength="1" class="pin-input" id="login-pin4">
+            </div>
+            <button class="btn" id="login-continue">Continue</button>
+            <div class="forgot-password" id="forgot-password">Forgot Password?</div>
+        </div>
+        
+        <!-- Reset Warning Screen -->
+        <div id="reset-screen" class="form-container" style="display: none;">
+            <h2 class="form-title">Reset Account</h2>
+            <div class="reset-warning">
+                By clicking continue you acknowledge to reset your entire device and account. All saved data will be erased!
+            </div>
+            <button class="btn" id="reset-continue">Continue</button>
+            <button class="btn btn-secondary" id="reset-back">Go Back</button>
+        </div>
+    </div>
+    
+    <script>
+        // DOM Elements
+        const welcomeOverlay = document.getElementById('welcome-overlay');
+        const welcomeScreen = document.getElementById('welcome-screen');
+        const setupScreen = document.getElementById('setup-screen');
+        const confirmScreen = document.getElementById('confirm-screen');
+        const signingScreen = document.getElementById('signing-screen');
+        const completeScreen = document.getElementById('complete-screen');
+        const loginScreen = document.getElementById('login-screen');
+        const resetScreen = document.getElementById('reset-screen');
+        
+        // Input elements
+        const nameInput = document.getElementById('name-input');
+        const avatarInput = document.getElementById('avatar-input');
+        const pinInputs = [
+            document.getElementById('pin1'),
+            document.getElementById('pin2'),
+            document.getElementById('pin3'),
+            document.getElementById('pin4')
+        ];
+        const confirmPinInputs = [
+            document.getElementById('confirm-pin1'),
+            document.getElementById('confirm-pin2'),
+            document.getElementById('confirm-pin3'),
+            document.getElementById('confirm-pin4')
+        ];
+        const loginPinInputs = [
+            document.getElementById('login-pin1'),
+            document.getElementById('login-pin2'),
+            document.getElementById('login-pin3'),
+            document.getElementById('login-pin4')
+        ];
+        
+        // Button elements
+        const welcomeArrow = document.getElementById('welcome-arrow');
+        const setupContinue = document.getElementById('setup-continue');
+        const confirmContinue = document.getElementById('confirm-continue');
+        const confirmBack = document.getElementById('confirm-back');
+        const loginContinue = document.getElementById('login-continue');
+        const forgotPassword = document.getElementById('forgot-password');
+        const resetContinue = document.getElementById('reset-continue');
+        const resetBack = document.getElementById('reset-back');
+        
+        // Login display elements
+        const loginAvatar = document.getElementById('login-avatar');
+        const loginName = document.getElementById('login-name');
+        
+        // User data
+        let userData = null;
+        let enteredPin = '';
+        
+        // Audio context for generating chime sound
+        let audioContext = null;
+        
+        // Function to generate chime sound using Web Audio API
+        function playChime() {
+            // Create audio context if it doesn't exist
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            
+            // Create oscillator for the first note (C5 - 523.25 Hz)
+            const oscillator1 = audioContext.createOscillator();
+            const gainNode1 = audioContext.createGain();
+            
+            oscillator1.connect(gainNode1);
+            gainNode1.connect(audioContext.destination);
+            
+            oscillator1.frequency.value = 523.25; // C5
+            oscillator1.type = 'sine';
+            
+            // Create oscillator for the second note (G5 - 783.99 Hz)
+            const oscillator2 = audioContext.createOscillator();
+            const gainNode2 = audioContext.createGain();
+            
+            oscillator2.connect(gainNode2);
+            gainNode2.connect(audioContext.destination);
+            
+            oscillator2.frequency.value = 783.99; // G5
+            oscillator2.type = 'sine';
+            
+            // Set volume envelope (fade in and out)
+            const now = audioContext.currentTime;
+            
+            // First note
+            gainNode1.gain.setValueAtTime(0, now);
+            gainNode1.gain.linearRampToValueAtTime(0.5, now + 0.1);
+            gainNode1.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
+            
+            // Second note (starts slightly after the first)
+            gainNode2.gain.setValueAtTime(0, now + 0.1);
+            gainNode2.gain.linearRampToValueAtTime(0.5, now + 0.2);
+            gainNode2.gain.exponentialRampToValueAtTime(0.01, now + 1.0);
+            
+            // Start oscillators
+            oscillator1.start(now);
+            oscillator2.start(now + 0.1);
+            
+            // Stop oscillators after the sound has faded out
+            oscillator1.stop(now + 1.0);
+            oscillator2.stop(now + 1.1);
+        }
+        
+        // Check if user data exists in localStorage
+        function checkUserData() {
+            const storedData = localStorage.getItem('auroraUserData');
+            if (storedData) {
+                userData = JSON.parse(storedData);
+                return true;
+            }
+            return false;
+        }
+        
+        // Save user data to localStorage
+        function saveUserData() {
+            localStorage.setItem('auroraUserData', JSON.stringify(userData));
+        }
+        
+        // Clear user data from localStorage
+        function clearUserData() {
+            localStorage.removeItem('auroraUserData');
+            userData = null;
+        }
+        
+        // Show screen function
+        function showScreen(screen) {
+            // Hide all screens
+            const screens = [welcomeScreen, setupScreen, confirmScreen, signingScreen, completeScreen, loginScreen, resetScreen];
+            screens.forEach(s => s.style.display = 'none');
+            
+            // Show the requested screen
+            screen.style.display = screen === welcomeScreen ? 'block' : 'block';
+            
+            // Special styling for form containers
+            if ([setupScreen, confirmScreen, loginScreen, resetScreen].includes(screen)) {
+                screen.style.display = 'block';
+            }
+        }
+        
+        // Validate PIN input
+        function validatePin(pinArray) {
+            return pinArray.every(input => input.value.length === 1);
+        }
+        
+        // Get PIN from inputs
+        function getPin(pinArray) {
+            return pinArray.map(input => input.value).join('');
+        }
+        
+        // Clear PIN inputs
+        function clearPinInputs(pinArray) {
+            pinArray.forEach(input => {
+                input.value = '';
+                input.classList.remove('error');
+            });
+        }
+        
+        // Mark PIN inputs as error
+        function markPinError(pinArray) {
+            pinArray.forEach(input => {
+                input.classList.add('error');
+            });
+        }
+        
+        // Setup PIN input navigation
+        function setupPinNavigation(pinArray) {
+            pinArray.forEach((input, index) => {
+                input.addEventListener('input', () => {
+                    if (input.value.length === 1 && index < pinArray.length - 1) {
+                        pinArray[index + 1].focus();
+                    }
+                });
+                
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Backspace' && input.value.length === 0 && index > 0) {
+                        pinArray[index - 1].focus();
+                    }
+                });
+            });
+        }
+        
+        // Initialize the welcome system
+        function initWelcomeSystem() {
+            // Check if user data exists
+            const hasUserData = checkUserData();
+            
+            if (hasUserData) {
+                // Show login screen for returning users
+                loginAvatar.src = userData.avatar || 'https://via.placeholder.com/100?text=User';
+                loginName.textContent = userData.name;
+                showScreen(loginScreen);
+            } else {
+                // Show welcome screen for new users
+                showScreen(welcomeScreen);
+            }
+            
+            // Setup PIN navigation
+            setupPinNavigation(pinInputs);
+            setupPinNavigation(confirmPinInputs);
+            setupPinNavigation(loginPinInputs);
+            
+            // Event listeners
+            welcomeArrow.addEventListener('click', () => {
+                showScreen(setupScreen);
+            });
+            
+            setupContinue.addEventListener('click', () => {
+                // Validate inputs
+                if (!nameInput.value.trim()) {
+                    alert('Please enter your name');
+                    return;
+                }
+                
+                if (!validatePin(pinInputs)) {
+                    alert('Please enter a complete 4-digit PIN');
+                    return;
+                }
+                
+                enteredPin = getPin(pinInputs);
+                showScreen(confirmScreen);
+            });
+            
+            confirmContinue.addEventListener('click', () => {
+                if (!validatePin(confirmPinInputs)) {
+                    alert('Please enter a complete 4-digit PIN');
+                    return;
+                }
+                
+                const confirmedPin = getPin(confirmPinInputs);
+                
+                if (enteredPin !== confirmedPin) {
+                    alert('PINs do not match. Please try again.');
+                    markPinError(confirmPinInputs);
+                    return;
+                }
+                
+                // Save user data
+                userData = {
+                    name: nameInput.value.trim(),
+                    avatar: avatarInput.value.trim() || 'https://via.placeholder.com/100?text=User',
+                    pin: enteredPin
+                };
+                
+                saveUserData();
+                
+                // Show signing in screen
+                showScreen(signingScreen);
+                
+                // Simulate signing in process
+                setTimeout(() => {
+                    showScreen(completeScreen);
+                    playChime();
+                    
+                    // Fade out after a second
+                    setTimeout(() => {
+                        welcomeOverlay.style.opacity = '0';
+                        
+                        // Remove overlay after fade out
+                        setTimeout(() => {
+                            welcomeOverlay.style.display = 'none';
+                            // The actual site content is now visible
+                        }, 800);
+                    }, 1000);
+                }, 1000);
+            });
+            
+            confirmBack.addEventListener('click', () => {
+                showScreen(setupScreen);
+            });
+            
+            loginContinue.addEventListener('click', () => {
+                if (!validatePin(loginPinInputs)) {
+                    alert('Please enter a complete 4-digit PIN');
+                    return;
+                }
+                
+                const loginPin = getPin(loginPinInputs);
+                
+                if (loginPin === userData.pin) {
+                    // Correct PIN
+                    playChime();
+                    
+                    // Fade out after a second
+                    setTimeout(() => {
+                        welcomeOverlay.style.opacity = '0';
+                        
+                        // Remove overlay after fade out
+                        setTimeout(() => {
+                            welcomeOverlay.style.display = 'none';
+                            // The actual site content is now visible
+                        }, 800);
+                    }, 1000);
+                } else {
+                    // Incorrect PIN
+                    alert('Incorrect PIN. Please try again.');
+                    markPinError(loginPinInputs);
+                    clearPinInputs(loginPinInputs);
+                    loginPinInputs[0].focus();
+                    
+                    // Show forgot password after first failed attempt
+                    forgotPassword.style.display = 'block';
+                }
+            });
+            
+            forgotPassword.addEventListener('click', () => {
+                showScreen(resetScreen);
+            });
+            
+            resetContinue.addEventListener('click', () => {
+                // Clear user data
+                clearUserData();
+                
+                // Reset form inputs
+                nameInput.value = '';
+                avatarInput.value = '';
+                clearPinInputs(pinInputs);
+                clearPinInputs(confirmPinInputs);
+                clearPinInputs(loginPinInputs);
+                
+                // Show welcome screen again
+                showScreen(welcomeScreen);
+                welcomeOverlay.style.opacity = '1';
+                welcomeOverlay.style.display = 'flex';
+                forgotPassword.style.display = 'none';
+            });
+            
+            resetBack.addEventListener('click', () => {
+                showScreen(loginScreen);
+            });
+        }
+        
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', initWelcomeSystem);
+    </script>
+</body>
+</html>
