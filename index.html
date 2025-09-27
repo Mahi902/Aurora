@@ -156,6 +156,28 @@
 
         #systemTray { font-size: 14px; font-weight: 500; }
 
+
+        #userSidebar {
+    position: fixed;
+    top: 0;
+    right: -320px; /* hidden by default */
+    width: 320px;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.4); /* slightly transparent to see blur */
+    backdrop-filter: blur(15px) saturate(120%); /* strong blur + color saturation */
+    -webkit-backdrop-filter: blur(15px) saturate(120%); /* for Safari */
+    border-left: 1px solid rgba(200,200,200,0.3);
+    box-shadow: -5px 0 20px rgba(0,0,0,0.1);
+    transition: right 0.3s ease;
+    z-index: 12000;
+    padding: 20px;
+    box-sizing: border-box;
+}
+#userSidebar.open {
+    right: 0;
+}
+        
+
         /* --- 4. App Menu --- */
         #appMenu {
             position: fixed;
@@ -391,85 +413,145 @@
     </div>
 
 
-    <!-- Sidebar -->
-<div id="userSidebar">
-  <div class="sidebar-header">
-    <img id="sidebarAvatar" class="sidebar-avatar" alt="User">
-    <div class="sidebar-info">
-      <div id="sidebarName" class="sidebar-name"></div>
-      <div id="sidebarDateTime" class="sidebar-datetime"></div>
-      <div id="sidebarTimezone" class="sidebar-timezone"></div>
-    </div>
-  </div>
-</div>
-
-<style>
-  #userSidebar {
-    position: fixed;
-    top: 0;
-    right: -320px;
-    width: 320px;
-    height: 100%;
-    background: rgba(255,255,255,0.95);
-    backdrop-filter: blur(10px);
-    border-left: 1px solid #ccc;
-    box-shadow: -5px 0 20px rgba(0,0,0,0.1);
-    transition: right 0.3s ease;
-    z-index: 12000;
-    padding: 20px;
-    box-sizing: border-box;
-  }
-  #userSidebar.open { right: 0; }
-
-  .sidebar-header { display: flex; align-items: center; gap: 15px; }
-  .sidebar-avatar {
-    width: 70px; height: 70px;
-    border-radius: 50%;
-    border: 3px solid #007aff;
-    object-fit: cover;
-  }
-  .sidebar-info { flex: 1; }
-  .sidebar-name { font-weight: 600; font-size: 1.2rem; margin-bottom: 6px; }
-  .sidebar-datetime { font-size: 0.95rem; color: #444; margin-bottom: 4px; }
-  .sidebar-timezone { font-size: 0.85rem; color: #666; }
-</style>
-
-<script>
+    <script>
 document.addEventListener("DOMContentLoaded", () => {
-  const sidebar = document.getElementById("userSidebar");
-  const sidebarName = document.getElementById("sidebarName");
-  const sidebarDateTime = document.getElementById("sidebarDateTime");
-  const sidebarTimezone = document.getElementById("sidebarTimezone");
-  const sidebarAvatar = document.getElementById("sidebarAvatar");
-  const clockElement = document.getElementById("clock");
+    /*** SIDEBAR SETUP ***/
+    const sidebarHTML = `
+      <div id="userSidebar">
+        <div class="sidebar-header">
+          <img id="sidebarAvatar" class="sidebar-avatar" alt="User">
+          <div class="sidebar-info">
+            <div id="sidebarName" class="sidebar-name"></div>
+            <div id="sidebarDateTime" class="sidebar-datetime"></div>
+            <div id="sidebarTimezone" class="sidebar-timezone"></div>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', sidebarHTML);
 
-  // Pull user info from lock screen / onboarding data
-  const lockScreenData = JSON.parse(localStorage.getItem("auroraLockScreenData") || "{}");
-  if (lockScreenData.name) sidebarName.textContent = lockScreenData.name;
-  if (lockScreenData.avatar) sidebarAvatar.src = lockScreenData.avatar;
-  else sidebarAvatar.src = "https://via.placeholder.com/80?text=User";
+    const sidebar = document.getElementById("userSidebar");
+    const sidebarName = document.getElementById("sidebarName");
+    const sidebarAvatar = document.getElementById("sidebarAvatar");
+    const sidebarDateTime = document.getElementById("sidebarDateTime");
+    const sidebarTimezone = document.getElementById("sidebarTimezone");
+    const clockElement = document.getElementById("clock");
 
-  // Update live date & time
-  function updateSidebarTime() {
-    const now = new Date();
-    const options = { weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" };
-    sidebarDateTime.textContent = now.toLocaleString([], options);
-    sidebarTimezone.textContent = `Timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`;
-  }
-  updateSidebarTime();
-  setInterval(updateSidebarTime, 1000);
+    // Pull user data from lock screen
+    const lockScreenData = JSON.parse(localStorage.getItem("auroraLockScreenData") || "{}");
+    sidebarName.textContent = lockScreenData.name || "Guest User";
+    sidebarAvatar.src = lockScreenData.avatar || "https://via.placeholder.com/80?text=User";
 
-  // Toggle sidebar on clock click
-  clockElement.addEventListener("click", () => sidebar.classList.toggle("open"));
-
-  // Close sidebar on outside click
-  document.addEventListener("click", (e) => {
-    if (!sidebar.contains(e.target) && e.target !== clockElement) {
-      sidebar.classList.remove("open");
+    // Update time/date
+    function updateSidebarTime() {
+        const now = new Date();
+        sidebarDateTime.textContent = now.toLocaleString([], { weekday:'long', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit'});
+        sidebarTimezone.textContent = `Timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`;
     }
-  });
+    updateSidebarTime();
+    setInterval(updateSidebarTime, 1000);
+
+    // Toggle sidebar on clock click
+    clockElement.addEventListener("click", () => sidebar.classList.toggle("open"));
+    document.addEventListener("click", e => {
+        if (!sidebar.contains(e.target) && e.target !== clockElement) sidebar.classList.remove("open");
+    });
+
+    /*** APP MENU & HOME SCREEN ***/
+    const homeScreenGrid = document.getElementById("homeScreenGrid");
+    const appGrid = document.getElementById("appGrid");
+
+    let homeScreenApps = JSON.parse(localStorage.getItem("homeScreenApps") || "[]");
+
+    function saveHomeScreenApps() { localStorage.setItem("homeScreenApps", JSON.stringify(homeScreenApps)); }
+
+    function renderHomeScreenApps() {
+        homeScreenGrid.innerHTML = "";
+        homeScreenApps.forEach(appId => {
+            const menuApp = appGrid.querySelector(`[data-app-id="${appId}"]`);
+            if (!menuApp) return;
+            const appIcon = menuApp.cloneNode(true);
+            appIcon.classList.remove("app-icon");
+            appIcon.classList.add("home-screen-app");
+            appIcon.dataset.appId = appId;
+
+            // Right-click menu on home screen apps
+            appIcon.addEventListener("contextmenu", e => showAppContext(e, appId, true));
+            appIcon.addEventListener("touchstart", e => { setTimeout(()=>showAppContext(e, appId, true), 600); });
+
+            homeScreenGrid.appendChild(appIcon);
+        });
+        enableDragDrop(homeScreenGrid);
+    }
+
+    // Right-click / long-press menu
+    const appContextMenu = document.createElement("ul");
+    appContextMenu.id = "appContextMenu";
+    Object.assign(appContextMenu.style, { position:'fixed', display:'none', listStyle:'none', padding:'6px 0', background:'rgba(255,255,255,0.95)', border:'1px solid #ccc', borderRadius:'8px', boxShadow:'0 4px 12px rgba(0,0,0,0.1)', zIndex:'20000' });
+    document.body.appendChild(appContextMenu);
+    let currentAppTarget = null;
+
+    function showAppContext(e, appId, onHome) {
+        e.preventDefault();
+        currentAppTarget = { appId, onHome };
+        appContextMenu.innerHTML = "";
+        const option = document.createElement("li");
+        option.textContent = onHome ? "Remove from Desktop" : "Show in Desktop";
+        Object.assign(option.style, { padding:'8px 16px', cursor:'pointer' });
+        option.onmouseenter = ()=>option.style.background="#eee";
+        option.onmouseleave = ()=>option.style.background="transparent";
+        option.onclick = () => {
+            if(onHome) homeScreenApps = homeScreenApps.filter(id=>id!==appId);
+            else if(!homeScreenApps.includes(appId)) homeScreenApps.push(appId);
+            saveHomeScreenApps(); renderHomeScreenApps(); hideContextMenu();
+        };
+        appContextMenu.appendChild(option);
+        appContextMenu.style.left = e.clientX + "px";
+        appContextMenu.style.top = e.clientY + "px";
+        appContextMenu.style.display = "block";
+    }
+    function hideContextMenu() { appContextMenu.style.display = "none"; }
+    document.addEventListener("click", hideContextMenu);
+
+    // Drag & drop home screen apps
+    function enableDragDrop(container) {
+        container.querySelectorAll(".home-screen-app").forEach(appIcon => {
+            appIcon.draggable = true;
+            appIcon.addEventListener("dragstart", e => e.dataTransfer.setData("text/plain", appIcon.dataset.appId));
+        });
+        container.ondragover = e=>e.preventDefault();
+        container.ondrop = e=>{
+            e.preventDefault();
+            const draggedId = e.dataTransfer.getData("text/plain");
+            const target = e.target.closest(".home-screen-app");
+            if(draggedId && target){
+                const from = homeScreenApps.indexOf(draggedId);
+                const to = homeScreenApps.indexOf(target.dataset.appId);
+                if(from>-1 && to>-1){ [homeScreenApps[from], homeScreenApps[to]] = [homeScreenApps[to], homeScreenApps[from]]; saveHomeScreenApps(); renderHomeScreenApps(); }
+            }
+        };
+    }
+
+    // Add context menu to app grid icons
+    new MutationObserver(()=> {
+        appGrid.querySelectorAll(".app-icon").forEach(appIcon => {
+            if(!appIcon.dataset.contextReady){
+                appIcon.dataset.contextReady="true";
+                const appId = appIcon.dataset.appId;
+                appIcon.addEventListener("contextmenu", e=>showAppContext(e, appId, false));
+                appIcon.addEventListener("touchstart", e=>setTimeout(()=>showAppContext(e, appId, false),600));
+                appIcon.draggable = true;
+                appIcon.addEventListener("dragstart", e=>e.dataTransfer.setData("text/plain", appId));
+            }
+        });
+    }).observe(appGrid,{ childList:true, subtree:true });
+
+    renderHomeScreenApps();
 });
-</script>
+    </script>
+    
+  
+  
 
     
     <div id="appMenu">
