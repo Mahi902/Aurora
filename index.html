@@ -888,6 +888,307 @@
         window.addEventListener('resize', setWallpaper);
     });
     </script>
+<style>
+    /* -------------------------------------- */
+    /* NEW UI ELEMENTS: Sidebar & Context Menu */
+    /* -------------------------------------- */
+
+    /* Time Sidebar */
+    #timeSidebar {
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: 350px; /* Wider for desktop, adjust for mobile responsiveness */
+        max-width: 90vw;
+        height: 100vh;
+        background: var(--bar-background);
+        backdrop-filter: blur(var(--bar-blur));
+        -webkit-backdrop-filter: blur(var(--bar-blur));
+        box-shadow: -4px 0 10px var(--shadow-color);
+        transform: translateX(100%);
+        transition: transform 0.3s ease-in-out;
+        z-index: 1000;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        color: var(--text-color);
+    }
+
+    #timeSidebar.open {
+        transform: translateX(0);
+    }
+
+    /* Sidebar User Info */
+    #sidebarUserInfo {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid var(--border-color);
+        margin-bottom: 20px;
+    }
+
+    #sidebarAvatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        object-fit: cover;
+        background: #fff;
+        border: 2px solid var(--border-color);
+    }
+
+    #sidebarUserName {
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+
+    /* Sidebar Clock Details */
+    #sidebarTimeDisplay {
+        font-size: 3rem;
+        font-weight: 500;
+        line-height: 1;
+        margin-bottom: 10px;
+    }
+
+    #sidebarDateDisplay {
+        font-size: 1.1rem;
+        font-weight: 400;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    /* Context Menu */
+    #taskbarContextMenu {
+        position: fixed;
+        min-width: 200px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px var(--shadow-color);
+        border: 1px solid var(--border-color);
+        padding: 8px 0;
+        z-index: 1001;
+        display: none; /* Hidden by default */
+        font-size: 0.9rem;
+    }
+
+    .context-menu-item {
+        padding: 8px 15px;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: background-color 0.1s;
+    }
+
+    .context-menu-item:hover {
+        background-color: var(--hover-background);
+    }
+</style>
+
+<!-- Time Sidebar HTML -->
+<div id="timeSidebar">
+    <div id="sidebarUserInfo">
+        <!-- Placeholder: User avatar will be loaded here -->
+        <img id="sidebarAvatar" src="https://placehold.co/60x60/4f46e5/ffffff?text=U" alt="User Avatar">
+        <span id="sidebarUserName">Loading User...</span>
+    </div>
+    <div id="sidebarClockDetails">
+        <div id="sidebarTimeDisplay">--:--</div>
+        <div id="sidebarDateDisplay">
+            <span id="sidebarDayDate">--</span>
+            <span id="sidebarMonthYear">--</span>
+            <span id="sidebarTimezone">--</span>
+        </div>
+    </div>
+</div>
+
+<!-- Taskbar Context Menu HTML -->
+<div id="taskbarContextMenu">
+    <!-- Items populated by JavaScript -->
+    <div class="context-menu-item" id="contextAddRemove">--</div>
+    <div class="context-menu-item" id="contextMoveTop">Move to top</div>
+    <div class="context-menu-item" id="contextMoveBottom">Move to bottom</div>
+</div>
+
+
+<script>
+    // --------------------------------------
+    // JAVASCRIPT LOGIC
+    // --------------------------------------
+
+    const userId = typeof __initial_auth_token !== 'undefined' ? (JSON.parse(atob(__initial_auth_token.split('.')[1])).uid) : 'guest';
+    const userName = localStorage.getItem('userName') || 'Guest User';
+    const userAvatarUrl = localStorage.getItem('userAvatarUrl') || `https://placehold.co/60x60/4f46e5/ffffff?text=${userName.charAt(0)}`;
+    
+    // DOM Elements
+    const timeSidebar = document.getElementById('timeSidebar');
+    const taskbarClock = document.getElementById('taskbarClock'); // **IMPORTANT: Assumes your taskbar clock has this ID**
+    const sidebarAvatar = document.getElementById('sidebarAvatar');
+    const sidebarUserName = document.getElementById('sidebarUserName');
+    const sidebarTimeDisplay = document.getElementById('sidebarTimeDisplay');
+    const sidebarDayDate = document.getElementById('sidebarDayDate');
+    const sidebarMonthYear = document.getElementById('sidebarMonthYear');
+    const sidebarTimezone = document.getElementById('sidebarTimezone');
+    
+    const contextMenu = document.getElementById('taskbarContextMenu');
+    const contextAddRemove = document.getElementById('contextAddRemove');
+    const contextMoveTop = document.getElementById('contextMoveTop');
+    const contextMoveBottom = document.getElementById('contextMoveBottom');
+    let targetTaskbarApp = null; // Store the taskbar element that was right-clicked
+
+    // --- 1. Time Sidebar Logic ---
+
+    // Function to update the clock display
+    function updateClock() {
+        const now = new Date();
+        
+        // Timezone name (e.g., "PST", "GMT+6")
+        const timeZoneName = Intl.DateTimeFormat('en', { timeZoneName:'short'}).format(now).split(' ')[1];
+
+        // Format for sidebar
+        sidebarTimeDisplay.textContent = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+        sidebarDayDate.textContent = now.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric' });
+        sidebarMonthYear.textContent = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        sidebarTimezone.textContent = `Timezone: ${timeZoneName}`;
+
+        // Update User Info
+        sidebarUserName.textContent = userName;
+        sidebarAvatar.src = userAvatarUrl;
+        
+    }
+
+    // Toggle sidebar visibility
+    function toggleSidebar() {
+        timeSidebar.classList.toggle('open');
+    }
+
+    // Initialize clock and start interval
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    // Event listener for the taskbar clock
+    if (taskbarClock) {
+        taskbarClock.addEventListener('click', toggleSidebar);
+    } else {
+        console.warn("Element with ID 'taskbarClock' not found. Clock sidebar won't open.");
+    }
+
+    // Close sidebar when clicking outside
+    document.addEventListener('click', (event) => {
+        if (timeSidebar.classList.contains('open') && 
+            !timeSidebar.contains(event.target) && 
+            (taskbarClock && !taskbarClock.contains(event.target))) 
+        {
+            timeSidebar.classList.remove('open');
+        }
+    });
+
+    // --- 2. Context Menu Logic (Taskbar Apps) ---
+
+    // Function to hide the context menu
+    function hideContextMenu() {
+        contextMenu.style.display = 'none';
+        targetTaskbarApp = null;
+    }
+
+    // Event listener for showing the context menu on taskbar apps
+    document.addEventListener('contextmenu', (e) => {
+        // 1. Check if the click target is a taskbar app icon/element
+        const appIcon = e.target.closest('.taskbar-app-icon'); // **IMPORTANT: Assumes your taskbar apps have the class '.taskbar-app-icon'**
+        
+        // If the taskbar clock is found, prevent context menu on it too if desired
+        if (appIcon) {
+            e.preventDefault(); // Prevent default browser context menu
+            e.stopPropagation(); // Stop event propagation
+
+            targetTaskbarApp = appIcon;
+            
+            // Position the context menu (a bit above the mouse for taskbar items)
+            contextMenu.style.left = `${e.clientX}px`;
+            contextMenu.style.top = `${e.clientY - contextMenu.offsetHeight - 10}px`;
+            contextMenu.style.display = 'block';
+
+            // Update "Add/Remove from home screen" text
+            // Simulation: use data-is-desktop attribute on the taskbar app element
+            const isOnDesktop = targetTaskbarApp.dataset.isDesktop === 'true';
+            contextAddRemove.textContent = isOnDesktop ? 'Remove from home screen' : 'Add to desktop';
+            
+        } else if (!e.target.closest('#taskbarContextMenu')) {
+            // If clicked elsewhere, hide the custom context menu
+            hideContextMenu();
+        }
+        
+        // 2. Prevent default right-click inside of "apps" (General prevention)
+        // This will prevent the default browser context menu globally, satisfying the user's request 
+        // to prevent "change wallpaper, open setting" which is likely the default browser menu or a custom one bound to right-click on the desktop/app area.
+        if (appIcon || !e.target.closest('#timeSidebar')) {
+             e.preventDefault();
+        }
+
+    }, true); // Use capture phase to ensure it runs before potential app-specific context menus
+
+    // Event listener for hiding the context menu on left click anywhere
+    document.addEventListener('click', (e) => {
+        if (!contextMenu.contains(e.target)) {
+            hideContextMenu();
+        }
+    });
+    
+    // --- 3. Context Menu Actions (Simulation) ---
+
+    function reorderTaskbar(element, direction) {
+        if (!element || !element.parentElement) return;
+        const parent = element.parentElement;
+        
+        if (direction === 'top') {
+            parent.prepend(element);
+            console.log(`App ${element.textContent.trim()} moved to top.`);
+        } else if (direction === 'bottom') {
+            parent.appendChild(element);
+            console.log(`App ${element.textContent.trim()} moved to bottom.`);
+        }
+        hideContextMenu();
+    }
+
+    contextAddRemove.addEventListener('click', () => {
+        if (targetTaskbarApp) {
+            const isOnDesktop = targetTaskbarApp.dataset.isDesktop === 'true';
+            
+            // Toggle the state (you would implement actual desktop logic here)
+            if (isOnDesktop) {
+                targetTaskbarApp.dataset.isDesktop = 'false';
+                console.log('App removed from home screen (Simulated)');
+            } else {
+                targetTaskbarApp.dataset.isDesktop = 'true';
+                console.log('App added to desktop (Simulated)');
+            }
+            hideContextMenu();
+        }
+    });
+
+    contextMoveTop.addEventListener('click', () => {
+        if (targetTaskbarApp) {
+            reorderTaskbar(targetTaskbarApp, 'top');
+        }
+    });
+
+    contextMoveBottom.addEventListener('click', () => {
+        if (targetTaskbarApp) {
+            reorderTaskbar(targetTaskbarApp, 'bottom');
+        }
+    });
+    
+    // --- 4. Context Menu Prevention (Final catch-all) ---
+    // Ensure the default context menu is prevented everywhere except the sidebar (where it's unlikely to matter)
+    // The previous listener handles it, but this is a final confirmation.
+    document.addEventListener('contextmenu', (e) => {
+        // Prevent default browser context menu unless inside an input/textarea
+        if (e.target.nodeName !== 'INPUT' && e.target.nodeName !== 'TEXTAREA') {
+            e.preventDefault();
+        }
+    });
+
+</script>
+
 </body>
 </html>
 
