@@ -1586,5 +1586,335 @@
         // Initialize when DOM is loaded
         document.addEventListener('DOMContentLoaded', initWelcomeSystem);
     </script>
+<style>
+    /*
+        CSS Variables assumed to be defined in your :root block:
+        --bar-blur, --bar-background, --text-color, --hover-background, --border-color, --shadow-color
+    */
+
+    /* -------------------------------------- */
+    /* NEW UI ELEMENTS: Sidebar & Context Menu */
+    /* -------------------------------------- */
+
+    /* Time Sidebar */
+    #timeSidebar {
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: 350px;
+        max-width: 90vw;
+        height: 100vh;
+        /* Using background variables defined in your root */
+        background: var(--bar-background);
+        backdrop-filter: blur(var(--bar-blur));
+        -webkit-backdrop-filter: blur(var(--bar-blur));
+        box-shadow: -6px 0 15px var(--shadow-color);
+        transform: translateX(100%);
+        transition: transform 0.3s ease-in-out;
+        z-index: 1001; /* Must be the highest z-index */
+        padding: 30px;
+        display: flex;
+        flex-direction: column;
+        color: var(--text-color);
+        font-family: 'Inter', sans-serif;
+    }
+
+    #timeSidebar.open {
+        transform: translateX(0);
+    }
+
+    /* Sidebar User Info */
+    #sidebarUserInfo {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        padding-bottom: 25px;
+        margin-bottom: 25px;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    #sidebarAvatar {
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        object-fit: cover;
+        background: #f0f0f0;
+        border: 3px solid #4f46e5;
+    }
+
+    #sidebarUserName {
+        font-weight: 600;
+        font-size: 1.2rem;
+    }
+
+    /* Sidebar Clock Details */
+    #sidebarTimeDisplay {
+        font-size: 4rem;
+        font-weight: 500;
+        line-height: 1;
+        margin-bottom: 15px;
+    }
+
+    #sidebarDateDisplay {
+        font-size: 1rem;
+        font-weight: 400;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        color: #555;
+    }
+    
+    #sidebarTimezone {
+        font-weight: 500;
+        margin-top: 10px;
+        color: var(--text-color);
+    }
+
+
+    /* Context Menu */
+    #taskbarContextMenu {
+        position: fixed;
+        min-width: 250px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(220, 220, 220, 0.8);
+        padding: 5px 0;
+        z-index: 1002;
+        display: none; /* Hidden by default */
+        font-size: 0.95rem;
+        overflow: hidden;
+        font-family: 'Inter', sans-serif;
+    }
+
+    .context-menu-item {
+        padding: 10px 20px;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: background-color 0.1s;
+    }
+
+    .context-menu-item:hover {
+        background-color: var(--hover-background);
+    }
+</style>
+
+<!-- 1. Time Sidebar HTML -->
+<div id="timeSidebar">
+    <div id="sidebarUserInfo">
+        <!-- Placeholder: User avatar will be loaded here -->
+        <img id="sidebarAvatar" src="pfp" alt="User Avatar">
+        <span id="sidebarUserName"></span>
+    </div>
+    <div id="sidebarClockDetails">
+        <div id="sidebarTimeDisplay">--:--</div>
+        <div id="sidebarDateDisplay">
+            <span id="sidebarDayDate">--</span>
+            <span id="sidebarMonthYear">--</span>
+            <span id="sidebarTimezone">--</span>
+        </div>
+    </div>
+</div>
+
+<!-- 2. Taskbar Context Menu HTML -->
+<div id="taskbarContextMenu">
+    <!-- Items populated by JavaScript -->
+    <div class="context-menu-item" id="contextAddRemove">--</div>
+    <div class="context-menu-item" id="contextMoveTop">Move to top</div>
+    <div class="context-menu-item" id="contextMoveBottom">Move to bottom</div>
+</div>
+
+
+
+<!-- Sidebar -->
+<div id="timeSidebar">
+  <div id="sidebarUserInfo">
+    <img id="sidebarAvatar" src="https://placehold.co/70x70/4f46e5/ffffff?text=U" alt="User Avatar">
+    <span id="sidebarUserName">Loading User...</span>
+  </div>
+  <div id="sidebarClockDetails">
+    <div id="sidebarTimeDisplay">--:--</div>
+    <div id="sidebarDateDisplay">
+      <span id="sidebarDayDate">--</span>
+      <span id="sidebarMonthYear">--</span>
+      <span id="sidebarTimezone">--</span>
+    </div>
+  </div>
+</div>
+
+<!-- Taskbar Context Menu -->
+<div id="taskbarContextMenu">
+  <div class="context-menu-item" id="contextAddRemove">--</div>
+  <div class="context-menu-item" id="contextMoveTop">Move to top</div>
+  <div class="context-menu-item" id="contextMoveBottom">Move to bottom</div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const EDGE_WIDTH = 30;
+
+  // DOM Elements
+  const taskbarClock = document.getElementById("clock"); // FIXED
+  const timeSidebar = document.getElementById("timeSidebar");
+  const sidebarAvatar = document.getElementById("sidebarAvatar");
+  const sidebarUserName = document.getElementById("sidebarUserName");
+  const sidebarTimeDisplay = document.getElementById("sidebarTimeDisplay");
+  const sidebarDayDate = document.getElementById("sidebarDayDate");
+  const sidebarMonthYear = document.getElementById("sidebarMonthYear");
+  const sidebarTimezone = document.getElementById("sidebarTimezone");
+
+  const contextMenu = document.getElementById("taskbarContextMenu");
+  const contextAddRemove = document.getElementById("contextAddRemove");
+  const contextMoveTop = document.getElementById("contextMoveTop");
+  const contextMoveBottom = document.getElementById("contextMoveBottom");
+  let targetTaskbarApp = null;
+
+  // --- USER DATA ---
+  function updateUserData() {
+    const stored = localStorage.getItem("auroraUserData");
+    if (stored) {
+      const user = JSON.parse(stored);
+      sidebarUserName.textContent = user.name || "Guest User";
+      sidebarAvatar.src =
+        user.avatar ||
+        `https://placehold.co/70x70/4f46e5/ffffff?text=${user.name
+          .charAt(0)
+          .toUpperCase()}`;
+    } else {
+      sidebarUserName.textContent = "Guest User";
+      sidebarAvatar.src =
+        "https://placehold.co/70x70/4f46e5/ffffff?text=U";
+    }
+  }
+
+  // --- CLOCK ---
+  function updateClock() {
+    const now = new Date();
+    const formattedTime = now.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    const dayName = now.toLocaleDateString("en-US", { weekday: "long" });
+    const dateNum = now.toLocaleDateString("en-US", { day: "numeric" });
+    const monthYear = now.toLocaleDateString("en-US", {
+      month: "long",
+      year: "numeric",
+    });
+    let timeZoneName = "Local Time";
+    try {
+      timeZoneName = Intl.DateTimeFormat("en", {
+        timeZoneName: "short",
+      })
+        .format(now)
+        .split(" ")
+        .pop();
+    } catch (e) {}
+
+    if (taskbarClock) taskbarClock.textContent = formattedTime;
+    sidebarTimeDisplay.textContent = formattedTime;
+    sidebarDayDate.textContent = `${dayName}, ${dateNum}`;
+    sidebarMonthYear.textContent = monthYear;
+    sidebarTimezone.textContent = `Timezone: ${timeZoneName}`;
+  }
+
+  // --- SIDEBAR TOGGLE ---
+  function toggleSidebar() {
+    timeSidebar.classList.toggle("open");
+    if (timeSidebar.classList.contains("open")) {
+      updateUserData();
+    }
+  }
+
+  function getTaskbarTop() {
+    if (taskbarClock) {
+      const rect = taskbarClock.getBoundingClientRect();
+      return rect.top;
+    }
+    return window.innerHeight - 50;
+  }
+
+  function isClickOnRightEdge(e) {
+    const viewportWidth = window.innerWidth;
+    const taskbarTop = getTaskbarTop();
+    const isRightEdge = e.clientX >= viewportWidth - EDGE_WIDTH;
+    const isTaskbarArea = e.clientY >= taskbarTop;
+    return isRightEdge && isTaskbarArea && !contextMenu.contains(e.target);
+  }
+
+  // --- CONTEXT MENU ---
+  function hideContextMenu() {
+    contextMenu.style.display = "none";
+    targetTaskbarApp = null;
+  }
+
+  document.addEventListener("contextmenu", (e) => {
+    const appIcon = e.target.closest(".taskbar-icon"); // FIXED
+    if (appIcon) {
+      e.preventDefault();
+      targetTaskbarApp = appIcon;
+      const rect = appIcon.getBoundingClientRect();
+      contextMenu.style.left = `${rect.left}px`;
+      contextMenu.style.top = `${rect.top - contextMenu.offsetHeight - 5}px`;
+      contextMenu.style.display = "block";
+      const isOnDesktop = targetTaskbarApp.dataset.isDesktop === "true";
+      contextAddRemove.textContent = isOnDesktop
+        ? "Remove from home screen"
+        : "Add to desktop";
+    } else if (!e.target.closest("#taskbarContextMenu")) {
+      hideContextMenu();
+    }
+  });
+
+  document.addEventListener("click", (e) => {
+    if (isClickOnRightEdge(e)) {
+      toggleSidebar();
+      return;
+    }
+    if (
+      timeSidebar.classList.contains("open") &&
+      !timeSidebar.contains(e.target)
+    ) {
+      setTimeout(() => timeSidebar.classList.remove("open"), 50);
+    }
+    if (!contextMenu.contains(e.target)) hideContextMenu();
+  });
+
+  // Context menu actions
+  function reorderTaskbar(element, direction) {
+    if (!element || !element.parentElement) return;
+    const appContainer = element.parentElement;
+    if (direction === "top") appContainer.prepend(element);
+    else if (direction === "bottom") appContainer.appendChild(element);
+    hideContextMenu();
+  }
+
+  contextAddRemove.addEventListener("click", () => {
+    if (targetTaskbarApp) {
+      const isOnDesktop = targetTaskbarApp.dataset.isDesktop === "true";
+      targetTaskbarApp.dataset.isDesktop = isOnDesktop ? "false" : "true";
+      console.log(
+        isOnDesktop
+          ? `Removed ${targetTaskbarApp.id} from home screen`
+          : `Added ${targetTaskbarApp.id} to desktop`
+      );
+      hideContextMenu();
+    }
+  });
+  contextMoveTop.addEventListener("click", () => reorderTaskbar(targetTaskbarApp, "top"));
+  contextMoveBottom.addEventListener("click", () => reorderTaskbar(targetTaskbarApp, "bottom"));
+
+  // Init
+  updateUserData();
+  updateClock();
+  setInterval(updateClock, 1000);
+});
+</script>
+
+        
+        
+    
+        
+
+    
 </body>
 </html>
