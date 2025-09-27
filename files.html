@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DocuDrop P2P Desktop</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    
+    <style>
+        /* Custom styles for a clean, desktop UI feel (full screen) */
+        body {
+            font-family: 'Inter', sans-serif; 
+            background-color: #f8f9fa; /* Light gray app background */
+            display: flex;
+            margin: 0;
+            height: 100vh;
+            overflow: hidden; /* Prevent body scroll */
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        /* Sidebar Styling (Left Panel - Navigation & Recent Activity) */
+        #sidebar-panel {
+            width: 300px; /* Wider sidebar to hold recent activity */
+            min-width: 300px;
+            background-color: #ffffff;
+            border-right: 1px solid #e9ecef;
+            padding: 1rem 0;
+            display: flex;
+            flex-direction: column;
+            overflow-y: hidden;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+        }
+        
+        /* Main Content Styling (Right Panel - Sender/Receiver View) */
+        #main-content {
+            flex-grow: 1;
+            padding: 2rem;
+            overflow-y: auto;
+            background-color: #f8f9fa;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            transition: background-color 0.2s, color 0.2s;
+            font-weight: 500;
+        }
+
+        .nav-item:hover {
+            background-color: #f3f4f6;
+        }
+
+        .nav-item.active {
+            background-color: #e6f0ff;
+            color: #1e40af; /* Darker blue text */
+            border-left: 4px solid #1e40af;
+            padding-left: 1.375rem; /* Adjusted for border */
+            font-weight: 600;
+        }
+        
+        /* Custom file list grid styles - clean and compact */
+        .file-item, .download-item {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0.75rem; 
+            background-color: #ffffff;
+            border-radius: 6px; 
+            border: 1px solid #e5e7eb;
+            text-align: center;
+            cursor: pointer;
+            transition: background-color 0.15s;
+        }
+        .file-item:hover, .download-item:hover {
+            background-color: #f3f4f6;
+            border-color: #d1d5db;
+        }
+        
+        .file-item-icon { font-size: 2rem; color: #4b5563; }
+        .file-item-name { 
+            font-size: 0.7rem; 
+            margin-top: 0.25rem;
+            word-break: break-all;
+            line-height: 1.2;
+            height: 2.4em; 
+            overflow: hidden;
+            color: #374151;
+        }
+
+        .file-item-delete-btn {
+            top: -0.4rem;
+            right: -0.4rem;
+            width: 1.4rem; 
+            height: 1.4rem; 
+            background-color: #f3f4f6;
+            border-radius: 50%;
+            border: 1px solid #d1d5db;
+        }
+        .file-item-delete-btn:hover { background-color: #ef4444; color: white; }
+        .file-item-delete-btn .material-icons { font-size: 0.9rem; }
+        
+        /* Drag and Drop hover state */
+        .drag-hover {
+            border-color: #3b82f6 !important;
+            background-color: #eff6ff;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar Panel (Always Visible) -->
+    <div id="sidebar-panel">
+        <header class="px-5 mb-4 mt-2">
+            <h1 class="text-2xl font-bold text-blue-700 flex items-center">
+                <span class="material-icons mr-2 text-3xl">folder</span> Files
+            </h1>
+        </header>
+
+        <!-- Peer ID Status -->
+        <div class="px-5 mb-4 border-b pb-4">
+            <p class="text-xs font-medium text-gray-500 mb-1">Your Peer ID</p>
+            <div class="flex items-center">
+                <span id="peer-id-display" class="text-lg font-mono font-semibold text-gray-800 select-all truncate">Initializing...</span>
+                <button id="copy-peer-id" class="ml-2 p-1 rounded-full hover:bg-gray-200 transition" title="Copy to Clipboard">
+                    <span class="material-icons text-gray-500 text-base">content_copy</span>
+                </button>
+            </div>
+            <p id="peer-status-message" class="text-xs text-green-600 mt-1">Connecting to server...</p>
+        </div>
+        
+        <!-- Navigation -->
+        <nav>
+            <div id="nav-sender" class="nav-item active" data-view="sender">
+                <span class="material-icons mr-3">upload_file</span> Send Files
+            </div>
+            <div id="nav-receiver" class="nav-item" data-view="receiver">
+                <span class="material-icons mr-3">download</span> Receive Files
+            </div>
+        </nav>
+        
+        <div class="px-5 my-4 text-sm font-semibold text-gray-600">Recent Activity</div>
+        
+        <!-- Recent Downloads List -->
+        <div id="download-list-container" class="px-5 flex-grow overflow-y-auto pb-4 space-y-3">
+            <div id="download-list" class="space-y-3">
+                <p id="no-downloads" class="text-gray-400 text-sm">No files received yet in this session.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <main id="main-content">
+        
+        <!-- Sender View (Active by default) -->
+        <div id="sender-view" class="view">
+            <h2 class="text-3xl font-semibold mb-6 text-gray-700">Send Files</h2>
+
+            <div id="sender-initial-view">
+                <div id="drop-area" class="text-center p-12 border-4 border-dashed border-gray-300 rounded-xl transition cursor-pointer hover:bg-gray-50">
+                    <label for="file-input" class="cursor-pointer block">
+                        <div class="flex flex-col items-center">
+                            <span class="material-icons text-7xl text-gray-400">upload</span>
+                            <p class="mt-4 text-xl font-semibold text-gray-700">Drag & Drop Files Here</p>
+                            <p class="text-sm text-gray-500">or click to browse your computer</p>
+                        </div>
+                    </label>
+                    <input type="file" id="file-input" class="hidden" multiple>
+                </div>
+    
+                <div id="file-list-container" class="mt-6 hidden">
+                    <p class="text-lg font-medium text-gray-700 mb-3">Files in Queue:</p>
+                    <div id="file-list" class="grid grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 max-h-48 overflow-y-auto p-3 bg-white rounded-lg border"></div>
+                    <div class="text-right mt-3 font-bold text-gray-600" id="total-size"></div>
+                </div>
+            </div>
+            
+            <div id="sender-connection-status" class="mt-8 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-lg text-center">
+                <p id="sender-conn-msg" class="text-sm font-medium text-yellow-800">Please connect to a receiver before sending.</p>
+            </div>
+            
+            <button id="send-btn" class="mt-6 w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center disabled:bg-gray-400 disabled:cursor-not-allowed transition hover:bg-blue-700 shadow-lg" disabled>
+                <span class="material-icons mr-2">send</span>
+                Start Transfer
+            </button>
+            
+            <div id="sender-progress-view" class="hidden mt-6 p-4 border rounded-xl bg-white shadow-sm"></div>
+            
+            <button id="send-another-file-btn" class="hidden mt-6 w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center transition hover:shadow-lg">
+                <span class="material-icons mr-2">replay</span>
+                Start New Transfer
+            </button>
+        </div>
+
+        <!-- Receiver View (Hidden by default) -->
+        <div id="receiver-view" class="view hidden">
+            <h2 class="text-3xl font-semibold mb-6 text-gray-700">Receive Files</h2>
+
+            <div id="receiver-initial-view">
+                <label for="peer-id-input" class="block text-lg font-medium text-gray-700 mb-2">Enter Sender's Peer Code</label>
+                <input type="text" id="peer-id-input" class="w-full p-4 border border-gray-300 rounded-lg focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition text-lg" placeholder="e.g., quiet-bear-42">
+                <button id="connect-btn" class="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center transition shadow-lg">
+                    <span class="material-icons mr-2">link</span>
+                    Connect and Listen
+                </button>
+            </div>
+
+            <div id="receiver-progress-view" class="hidden mt-6 p-6 border rounded-xl bg-white shadow-sm">
+                <p id="receiver-status" class="text-center text-lg font-medium text-gray-600 animate-pulse mb-4">Awaiting connection...</p>
+                <div id="receiver-files-container" class="mt-4 space-y-4"></div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modals & Popups -->
+    <div id="message-popup" class="hidden fixed bottom-5 right-5 bg-gray-800 text-white py-2 px-5 rounded-full shadow-lg text-sm z-50 transition transform translate-x-0">
+        <span id="message-text"></span>
+    </div>
+
+    <div id="restart-popup" class="hidden fixed bottom-5 left-1/2 -translate-x-1/2 w-11/12 max-w-sm">
+        <div class="bg-white rounded-lg shadow-2xl p-4 flex items-center justify-between border-t-4 border-blue-500">
+            <p class="text-gray-700 font-medium">Sender wants to initiate a new transfer.</p>
+            <div>
+                <button id="accept-restart-btn" class="bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-semibold mr-2 hover:bg-green-600 transition">Accept</button>
+                <button id="reject-restart-btn" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-300 transition">Reject</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const CHUNK_SIZE = 64 * 1024; // 64KB
+        const DOWNLOADS_KEY = 'docudrop_downloads';
+
+        // --- DOM Elements ---
+        const views = {
+            sender: document.getElementById('sender-view'),
+            receiver: document.getElementById('receiver-view'),
+        };
+        const navItems = {
+            sender: document.getElementById('nav-sender'),
+            receiver: document.getElementById('nav-receiver'),
+        };
+
+        // Sidebar elements
+        const peerIdDisplay = document.getElementById('peer-id-display');
+        const copyPeerIdBtn = document.getElementById('copy-peer-id');
+        const peerStatusMessage = document.getElementById('peer-status-message');
+        const downloadList = document.getElementById('download-list');
+        const noDownloadsMessage = document.getElementById('no-downloads');
+
+        // Sender elements
+        const fileInput = document.getElementById('file-input');
+        const dropArea = document.getElementById('drop-area');
+        const fileListContainer = document.getElementById('file-list-container');
+        const fileList = document.getElementById('file-list');
+        const totalSizeEl = document.getElementById('total-size');
+        const senderInitialView = document.getElementById('sender-initial-view');
+        const senderConnStatus = document.getElementById('sender-connection-status');
+        const senderConnMsg = document.getElementById('sender-conn-msg');
+        const sendBtn = document.getElementById('send-btn');
+        const senderProgressView = document.getElementById('sender-progress-view');
+        const sendAnotherFileBtn = document.getElementById('send-another-file-btn');
+
+        // Receiver elements
+        const peerIdInput = document.getElementById('peer-id-input');
+        const connectBtn = document.getElementById('connect-btn');
+        const receiverInitialView = document.getElementById('receiver-initial-view');
+        const receiverProgressView = document.getElementById('receiver-progress-view');
+        const receiverStatus = document.getElementById('receiver-status');
+        const receiverFilesContainer = document.getElementById('receiver-files-container');
+        
+        // Popup elements
+        const messagePopup = document.getElementById('message-popup');
+        const messageText = document.getElementById('message-text');
+        const restartPopup = document.getElementById('restart-popup');
+        const acceptRestartBtn = document.getElementById('accept-restart-btn');
+        const rejectRestartBtn = document.getElementById('reject-restart-btn');
+
+
+        // --- App State ---
+        let peer;
+        let conn;
+        let filesToSend = [];
+        let receivedFiles = {};
+        let downloadRecords = []; // Tracks downloads in the current session
+
+        // --- Utility Functions ---
+
+        /** Shows the specified view and updates the navigation state. */
+        const showView = (viewName) => {
+            // Hide all views and remove active class from all nav items
+            Object.values(views).forEach(view => view.classList.add('hidden'));
+            Object.values(navItems).forEach(nav => nav.classList.remove('active'));
+
+            // Show the target view and set its nav item to active
+            if (views[viewName]) {
+                views[viewName].classList.remove('hidden');
+            }
+            if (navItems[viewName]) {
+                navItems[viewName].classList.add('active');
+            }
+        };
+
+        const formatBytes = (bytes, decimals = 2) => {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+        };
+
+        const getIconForFile = (file) => {
+            const fileName = file.name || file.fileName;
+            const fileType = file.type || file.fileType;
+            const extension = fileName.split('.').pop().toLowerCase();
+            
+            if (fileType && fileType.startsWith('image/')) return 'image';
+            if (fileType && fileType.startsWith('video/')) return 'video_file';
+            if (['zip', 'rar', '7z', 'tar', 'gz'].includes(extension)) return 'folder_zip';
+            if (['pdf'].includes(extension)) return 'picture_as_pdf';
+            if (['html', 'css', 'js', 'json', 'md', 'py', 'java'].includes(extension)) return 'code';
+            if (['doc', 'docx', 'txt', 'xls', 'xlsx', 'ppt', 'pptx'].includes(extension)) return 'description';
+            
+            return 'insert_drive_file';
+        }
+
+        const showMessage = (msg) => {
+            messageText.textContent = msg;
+            messagePopup.classList.remove('hidden');
+            setTimeout(() => {
+                messagePopup.classList.add('hidden');
+            }, 4000); 
+        };
+        
+        // --- Navigation Setup ---
+        Object.keys(navItems).forEach(viewName => {
+            navItems[viewName].addEventListener('click', () => {
+                showView(viewName);
+            });
+        });
+
+        // --- PeerJS Initialization (Runs ONCE on load) ---
+        function initPeer() {
+            peer = new Peer();
+            
+            peer.on('open', id => {
+                peerIdDisplay.textContent = id;
+                peerStatusMessage.textContent = 'Ready for connection.';
+                peerStatusMessage.classList.remove('text-red-600', 'text-yellow-600');
+                peerStatusMessage.classList.add('text-green-600');
+                showMessage(`Peer ID is: ${id}`);
+            });
+            
+            peer.on('error', err => {
+                console.error("PeerJS error:", err);
+                peerStatusMessage.textContent = `Error: ${err.type}. See console.`;
+                peerStatusMessage.classList.remove('text-green-600', 'text-yellow-600');
+                peerStatusMessage.classList.add('text-red-600');
+            });
+
+            // Handles incoming connections (Sender side)
+            peer.on('connection', newConn => {
+                // If a connection already exists, reject the new one (P2P supports only one connection here)
+                if (conn && conn.open) {
+                    newConn.close();
+                    showMessage('Already connected to a receiver.');
+                    return;
+                }
+                
+                conn = newConn;
+                handleConnectionOpened();
+
+                conn.on('data', handleSenderData); 
+                conn.on('close', handleConnectionClosed);
+                conn.on('error', (err) => {
+                    console.error('Connection error (Sender side):', err);
+                    showMessage('Connection error occurred.');
+                    handleConnectionClosed();
+                });
+            });
+        }
+        
+        // Common handler when a connection is established (both Sender and Receiver)
+        function handleConnectionOpened() {
+            showMessage('Connection established!');
+            
+            // Sender UI update
+            senderConnMsg.textContent = 'Connected to receiver! Ready to send.';
+            senderConnStatus.classList.remove('bg-yellow-50', 'border-yellow-400');
+            senderConnStatus.classList.add('bg-green-50', 'border-green-400');
+            
+            // Receiver UI update
+            receiverStatus.textContent = 'Connected! Waiting for files...';
+            receiverStatus.classList.remove('animate-pulse');
+
+            if (filesToSend.length > 0) {
+                sendBtn.disabled = false;
+            }
+        }
+        
+        // Common handler when connection is closed (both Sender and Receiver)
+        function handleConnectionClosed() {
+            showMessage('Connection closed. Please reconnect.');
+            conn = null;
+
+            // Sender UI reset
+            senderConnMsg.textContent = 'Connection closed. Please connect to a receiver.';
+            senderConnStatus.classList.remove('bg-green-50', 'border-green-400');
+            senderConnStatus.classList.add('bg-yellow-50', 'border-yellow-400');
+            sendBtn.disabled = true;
+            sendAnotherFileBtn.classList.add('hidden');
+            
+            // Receiver UI reset
+            if (views.receiver.classList.contains('active')) {
+                receiverInitialView.classList.remove('hidden');
+                receiverProgressView.classList.add('hidden');
+                receiverStatus.textContent = 'Awaiting connection...';
+                receiverStatus.classList.add('animate-pulse');
+                connectBtn.disabled = false;
+            }
+        }
+        
+        // --- Persistent Download Logic (Current Session) ---
+        
+        /** Loads download records from localStorage (metadata only). */
+        const loadDownloadRecords = () => {
+            try {
+                const storedRecords = localStorage.getItem(DOWNLOADS_KEY);
+                downloadRecords = storedRecords ? JSON.parse(storedRecords) : [];
+            } catch (error) {
+                console.error("Error loading downloads:", error);
+                downloadRecords = [];
+            }
+        };
+
+        /** Saves a new download metadata and its Blob URL to local state. */
+        const saveDownload = (metadata, url) => {
+            const id = Date.now().toString() + Math.random().toString(16).slice(2);
+            const record = {
+                id: id,
+                name: metadata.name,
+                size: metadata.size,
+                type: metadata.type,
+                receivedAt: new Date().toISOString(),
+                url: url 
+            };
+            downloadRecords.push(record);
+            // We save a reduced version of the record (without URL) to localStorage for persistence across reloads.
+            const storableRecords = downloadRecords.map(({url, ...rest}) => rest);
+            localStorage.setItem(DOWNLOADS_KEY, JSON.stringify(storableRecords));
+            renderDownloads();
+        };
+
+        /** Renders the Recent Activity list. */
+        const renderDownloads = () => {
+            downloadList.innerHTML = '';
+            
+            if (downloadRecords.length === 0) {
+                noDownloadsMessage.classList.remove('hidden');
+                return;
+            }
+            
+            noDownloadsMessage.classList.add('hidden');
+            downloadRecords.sort((a, b) => new Date(b.receivedAt) - new Date(a.receivedAt));
+
+            downloadRecords.forEach(record => {
+                const downloadItem = document.createElement('div');
+                downloadItem.className = 'download-item p-3 border-b border-gray-100 hover:bg-gray-50 flex items-start space-x-3 transition';
+                downloadItem.title = record.name;
+                
+                const hasUrl = record.url ? true : false;
+                const iconColor = hasUrl ? 'text-green-600' : 'text-yellow-600';
+                const actionText = hasUrl ? 'Download' : 'Expired';
+
+                downloadItem.innerHTML = `
+                    <span class="material-icons ${iconColor} text-xl">${getIconForFile(record)}</span>
+                    <div class="flex-grow min-w-0">
+                        <p class="text-sm font-medium text-gray-800 truncate">${record.name}</p>
+                        <p class="text-xs text-gray-500">${formatBytes(record.size)} • ${actionText}</p>
+                    </div>
+                    <button class="text-gray-400 hover:text-red-500 transition material-icons text-lg flex-shrink-0" data-id="${record.id}" title="Remove from list">close</button>
+                `;
+
+                downloadItem.addEventListener('click', (e) => {
+                    if (e.target.tagName === 'BUTTON' || e.target.tagName === 'SPAN' && e.target.textContent === 'close') {
+                        deleteDownload(record.id);
+                        return;
+                    }
+                    
+                    if (record.url) {
+                        const a = document.createElement('a');
+                        a.href = record.url;
+                        a.download = record.name;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        showMessage(`Downloading ${record.name}...`);
+                    } else {
+                        showMessage('Download link expired. Files must be saved locally upon receipt.');
+                    }
+                });
+                
+                downloadList.appendChild(downloadItem);
+            });
+        };
+
+        /** Deletes a download record and revokes its Blob URL. */
+        const deleteDownload = (id) => {
+            const index = downloadRecords.findIndex(r => r.id === id);
+            if (index > -1) {
+                const record = downloadRecords[index];
+                if (record.url) {
+                    URL.revokeObjectURL(record.url);
+                }
+                downloadRecords.splice(index, 1);
+                const storableRecords = downloadRecords.map(({url, ...rest}) => rest);
+                localStorage.setItem(DOWNLOADS_KEY, JSON.stringify(storableRecords));
+                showMessage(`Removed '${record.name}' from recents.`);
+                renderDownloads();
+            }
+        };
+
+        // --- Sender Logic ---
+        
+        copyPeerIdBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(peerIdDisplay.textContent)
+                .then(() => showMessage('Peer ID copied to clipboard!'))
+                .catch(err => showMessage('Failed to copy ID. Please copy manually.'));
+        });
+
+        // Drag and Drop Logic
+        dropArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.currentTarget.classList.add('drag-hover');
+        });
+
+        dropArea.addEventListener('dragleave', (e) => {
+            e.currentTarget.classList.remove('drag-hover');
+        });
+
+        dropArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-hover');
+
+            const droppedFiles = Array.from(e.dataTransfer.files);
+            if (droppedFiles.length > 0) {
+                filesToSend = [...filesToSend, ...droppedFiles];
+                updateFileListUI();
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            filesToSend = Array.from(e.target.files);
+            updateFileListUI();
+        });
+
+        function updateFileListUI() {
+            fileList.innerHTML = '';
+            if (filesToSend.length === 0) {
+                fileListContainer.classList.add('hidden');
+                sendBtn.disabled = true;
+                return;
+            }
+
+            let totalSize = 0;
+            filesToSend.forEach((file, index) => {
+                totalSize += file.size;
+
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                
+                fileItem.innerHTML = `
+                    <button class="file-item-delete-btn absolute flex items-center justify-center" data-index="${index}">
+                        <span class="material-icons">close</span>
+                    </button>
+                    <span class="material-icons file-item-icon">${getIconForFile(file)}</span>
+                    <p class="file-item-name">${file.name}</p>
+                    <p class="text-xs text-gray-500 mt-1">${formatBytes(file.size)}</p>
+                `;
+                fileList.appendChild(fileItem);
+            });
+
+            totalSizeEl.textContent = `Total files: ${filesToSend.length} | Size: ${formatBytes(totalSize)}`;
+            fileListContainer.classList.remove('hidden');
+
+            document.querySelectorAll('.file-item-delete-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const targetIndex = parseInt(e.currentTarget.getAttribute('data-index')); 
+                    
+                    filesToSend.splice(targetIndex, 1);
+                    updateFileListUI(); // Re-render to update file indices
+                });
+            });
+
+            if (conn && conn.open) {
+                sendBtn.disabled = filesToSend.length === 0;
+            }
+        }
+
+        sendBtn.addEventListener('click', sendFiles);
+
+        async function sendFiles() {
+            if (!conn || !conn.open) {
+                showMessage("Not connected. Please wait for the receiver to connect.");
+                return;
+            }
+            if (filesToSend.length === 0) {
+                 showMessage("Please select at least one file to send.");
+                return;
+            }
+            
+            sendBtn.disabled = true;
+            senderInitialView.classList.add('hidden');
+            senderConnStatus.classList.add('hidden');
+            senderProgressView.classList.remove('hidden');
+            senderProgressView.innerHTML = '';
+
+            const metadata = filesToSend.map(file => ({
+                name: file.name,
+                size: file.size,
+                type: file.type,
+            }));
+            
+            conn.send({ type: 'metadata', payload: metadata });
+            showMessage(`Sending metadata for ${filesToSend.length} files...`);
+
+            for (const file of filesToSend) {
+                createSenderProgressUI(file);
+                try {
+                    await sendFileInChunks(file);
+                } catch (error) {
+                    console.error(`Error sending file ${file.name}:`, error);
+                    showMessage(`Transfer failed for ${file.name}. Transfer aborted.`);
+                    break;
+                }
+            }
+        }
+        
+        function sendFileInChunks(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                let offset = 0;
+
+                reader.onload = (e) => {
+                    try {
+                        const chunk = e.target.result;
+                        conn.send({ type: 'chunk', payload: { name: file.name, chunk } });
+                        offset += chunk.byteLength;
+                        updateSenderProgress(file.name, (offset / file.size) * 100);
+
+                        requestAnimationFrame(() => {
+                             if (offset < file.size) {
+                                readSlice(offset);
+                            } else {
+                                conn.send({ type: 'file_complete', payload: { name: file.name } });
+                                resolve();
+                            }
+                        });
+                       
+                    } catch(err) {
+                        reject(err);
+                    }
+                };
+                reader.onerror = (err) => reject(err);
+                
+                const readSlice = (o) => {
+                    const slice = file.slice(o, o + CHUNK_SIZE);
+                    reader.readAsArrayBuffer(slice);
+                };
+                
+                readSlice(0);
+            });
+        }
+        
+        function createSenderProgressUI(file) {
+            const progressItem = document.createElement('div');
+            const safeName = file.name.replace(/[^a-zA-Z0-9]/g, '_');
+            progressItem.id = `sender-progress-${safeName}`;
+            progressItem.className = 'mb-4';
+            progressItem.innerHTML = `
+                <div class="flex justify-between items-center text-sm mb-1">
+                    <span class="font-medium truncate max-w-xs">${file.name}</span>
+                    <span class="text-gray-500" id="sender-percent-${safeName}">0%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div id="sender-bar-${safeName}" class="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-in-out" style="width: 0%"></div>
+                </div>
+            `;
+            senderProgressView.appendChild(progressItem);
+        }
+
+        function updateSenderProgress(fileName, percentage) {
+            const safeName = fileName.replace(/[^a-zA-Z0-9]/g, '_');
+            const percentEl = document.getElementById(`sender-percent-${safeName}`);
+            const barEl = document.getElementById(`sender-bar-${safeName}`);
+            
+            if (percentEl && barEl) {
+                const p = Math.min(100, Math.round(percentage));
+                percentEl.textContent = `${p}%`;
+                barEl.style.width = `${p}%`;
+                 if(p === 100) {
+                    percentEl.textContent = 'Sent!';
+                    barEl.classList.remove('bg-blue-600');
+                    barEl.classList.add('bg-green-600');
+                }
+            }
+            
+            // Check if all files are complete
+            const allDone = filesToSend.every(f => {
+                const bar = document.getElementById(`sender-bar-${f.name.replace(/[^a-zA-Z0-9]/g, '_')}`);
+                return bar && parseFloat(bar.style.width) >= 100;
+            });
+
+            if (allDone) {
+                showMessage("All files transferred successfully!");
+                sendAnotherFileBtn.classList.remove('hidden');
+            }
+        }
+        
+        function resetSenderState() {
+            filesToSend = [];
+            fileList.innerHTML = '';
+            fileListContainer.classList.add('hidden');
+            totalSizeEl.textContent = '';
+            fileInput.value = '';
+            sendBtn.disabled = true;
+            senderInitialView.classList.remove('hidden');
+            senderConnStatus.classList.remove('hidden'); // Show connection status again
+            senderProgressView.classList.add('hidden');
+            senderProgressView.innerHTML = '';
+            sendAnotherFileBtn.classList.add('hidden');
+            
+            if (conn && conn.open) {
+                senderConnMsg.textContent = 'Connected to receiver! Ready to send.';
+                senderConnStatus.classList.remove('bg-yellow-50', 'border-yellow-400');
+                senderConnStatus.classList.add('bg-green-50', 'border-green-400');
+            } else {
+                senderConnMsg.textContent = 'Please connect to a receiver before sending.';
+                senderConnStatus.classList.add('bg-yellow-50', 'border-yellow-400');
+                senderConnStatus.classList.remove('bg-green-50', 'border-green-400');
+            }
+        }
+        
+        // Sender's dedicated data handler (only handles control messages)
+        function handleSenderData(data) {
+            if (data.type === 'restart_accepted') {
+                showMessage('Receiver accepted new transfer. Ready to select files.');
+                resetSenderState();
+            } else if (data.type === 'restart_rejected') {
+                showMessage('Receiver rejected new transfer request.');
+                sendAnotherFileBtn.classList.remove('hidden'); 
+                senderProgressView.classList.remove('hidden'); 
+                senderProgressView.innerHTML = '<p class="text-center text-red-600 font-semibold">Transfer request rejected by receiver.</p>';
+            } else if (data.type === 'receiver_ready') {
+                // Initial message from receiver after connection open
+                handleConnectionOpened();
+            }
+        }
+
+        sendAnotherFileBtn.addEventListener('click', () => {
+            if (conn && conn.open) {
+                conn.send({ type: 'restart_request' });
+                resetSenderState();
+                showMessage('Requested new transfer from receiver...');
+            } else {
+                showMessage('Connection lost. Please reset state and reconnect.');
+                resetSenderState();
+            }
+        });
+
+        // --- Receiver Logic ---
+
+        connectBtn.addEventListener('click', () => {
+            const senderId = peerIdInput.value.trim();
+            if (!senderId) {
+                showMessage('Please enter a Peer ID.');
+                return;
+            }
+            if (!peer || peer.disconnected) {
+                showMessage('Peer is not initialized. Please refresh the app.');
+                return;
+            }
+
+            conn = peer.connect(senderId);
+            receiverInitialView.classList.add('hidden');
+            receiverProgressView.classList.remove('hidden');
+            receiverStatus.textContent = 'Attempting connection...';
+            connectBtn.disabled = true;
+
+            conn.on('open', () => {
+                handleConnectionOpened();
+                conn.send({type: 'receiver_ready'});
+                connectBtn.disabled = false;
+            });
+            conn.on('data', handleReceiverData);
+            conn.on('close', handleConnectionClosed);
+            conn.on('error', (err) => {
+                console.error('Connection error:', err);
+                showMessage('Connection failed. Check the Peer ID and network connection.');
+                handleConnectionClosed();
+            });
+        });
+
+        function handleReceiverData(data) {
+            switch (data.type) {
+                case 'metadata':
+                    receiverStatus.textContent = `Receiving ${data.payload.length} files...`;
+                    receiverFilesContainer.innerHTML = ''; 
+                    receivedFiles = {}; 
+                    data.payload.forEach(meta => {
+                        receivedFiles[meta.name] = { metadata: meta, chunks: [], receivedSize: 0 };
+                        createReceiverProgressUI(meta);
+                    });
+                    break;
+                case 'chunk':
+                    const file = receivedFiles[data.payload.name];
+                    if (file) {
+                        file.chunks.push(data.payload.chunk);
+                        file.receivedSize += data.payload.chunk.byteLength;
+                        const progress = (file.receivedSize / file.metadata.size) * 100;
+                        updateReceiverProgress(file.metadata.name, progress, file.receivedSize, file.metadata.size);
+                    }
+                    break;
+                case 'file_complete':
+                    const completedFile = receivedFiles[data.payload.name];
+                    if (completedFile) {
+                        // Concatenate array buffers into a single Blob
+                        const blob = new Blob(completedFile.chunks, { type: completedFile.metadata.type });
+                        const url = URL.createObjectURL(blob);
+                        
+                        // Add download link to the progress bar and save to recents list
+                        addDownloadLink(completedFile.metadata.name, url);
+                        saveDownload(completedFile.metadata, url); 
+                        
+                        delete completedFile.chunks;
+                    }
+                    
+                    const allDone = Object.values(receivedFiles).every(f => f.receivedSize >= f.metadata.size);
+                    if (allDone) {
+                        receiverStatus.textContent = 'All files received. Download them from the links below.';
+                        showMessage('All transfers complete!');
+                    }
+                    break;
+                case 'restart_request':
+                    restartPopup.classList.remove('hidden');
+                    break;
+            }
+        }
+        
+        function createReceiverProgressUI(metadata) {
+            const safeName = metadata.name.replace(/[^a-zA-Z0-9]/g, '_');
+            const progressItem = document.createElement('div');
+            progressItem.id = `receiver-progress-${safeName}`;
+            progressItem.className = 'mb-4 bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm';
+            progressItem.innerHTML = `
+                <div class="flex justify-between items-center text-sm mb-1">
+                    <span class="font-medium truncate max-w-xs">${metadata.name}</span>
+                    <span class="text-gray-500" id="receiver-percent-${safeName}">0%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                    <div id="receiver-bar-${safeName}" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300 ease-in-out" style="width: 0%"></div>
+                </div>
+                <div class="text-xs text-right text-gray-500 mt-1" id="receiver-size-info-${safeName}">
+                    0 Bytes / ${formatBytes(metadata.size)}
+                </div>
+                <div id="download-container-${safeName}" class="hidden mt-3"></div>
+            `;
+            receiverFilesContainer.appendChild(progressItem);
+        }
+        
+        function updateReceiverProgress(fileName, percentage, receivedSize, totalSize) {
+            const safeName = fileName.replace(/[^a-zA-Z0-9]/g, '_');
+            const percentEl = document.getElementById(`receiver-percent-${safeName}`);
+            const barEl = document.getElementById(`receiver-bar-${safeName}`);
+            const sizeInfoEl = document.getElementById(`receiver-size-info-${safeName}`);
+
+            if (percentEl && barEl && sizeInfoEl) {
+                const p = Math.min(100, Math.round(percentage));
+                percentEl.textContent = `${p}%`;
+                barEl.style.width = `${p}%`;
+                sizeInfoEl.textContent = `${formatBytes(receivedSize)} / ${formatBytes(totalSize)}`;
+                if (p === 100) {
+                    barEl.classList.remove('bg-blue-600');
+                    barEl.classList.add('bg-green-600');
+                    percentEl.textContent = 'Complete!';
+                }
+            }
+        }
+
+        function addDownloadLink(fileName, url) {
+            const safeName = fileName.replace(/[^a-zA-Z0-9]/g, '_');
+            const container = document.getElementById(`download-container-${safeName}`);
+
+            if (container) {
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = fileName;
+                link.className = 'inline-flex items-center bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg text-sm transition shadow-md';
+                link.innerHTML = `<span class="material-icons mr-2 text-base">file_download</span>Download Now`;
+                container.innerHTML = '';
+                container.appendChild(link);
+                container.classList.remove('hidden');
+            }
+        }
+        
+        function resetReceiverState(keepConnection = true) {
+            receivedFiles = {};
+            peerIdInput.value = '';
+            receiverFilesContainer.innerHTML = '';
+            restartPopup.classList.add('hidden');
+            
+            if (keepConnection && conn && conn.open) {
+                receiverStatus.textContent = 'Ready for new transfer...';
+                receiverStatus.classList.remove('animate-pulse');
+                receiverProgressView.classList.remove('hidden');
+                receiverInitialView.classList.add('hidden');
+                connectBtn.disabled = false;
+            } else {
+                receiverProgressView.classList.add('hidden');
+                receiverInitialView.classList.remove('hidden');
+                receiverStatus.textContent = 'Awaiting connection...';
+                receiverStatus.classList.add('animate-pulse');
+                connectBtn.disabled = false;
+            }
+        }
+
+        // --- Restart Logic ---
+        acceptRestartBtn.addEventListener('click', () => {
+            if (conn && conn.open) {
+                conn.send({ type: 'restart_accepted' });
+                resetReceiverState(true);
+            }
+            restartPopup.classList.add('hidden');
+        });
+
+        rejectRestartBtn.addEventListener('click', () => {
+            if (conn && conn.open) {
+                conn.send({ type: 'restart_rejected' });
+            }
+            restartPopup.classList.add('hidden');
+            showMessage("New transfer rejected.");
+            receiverStatus.textContent = 'Transfer rejected. Waiting for a new connection or sender action.';
+        });
+        
+        // --- Initialization ---
+        initPeer();
+        loadDownloadRecords();
+        renderDownloads();
+        showView('sender'); 
+    });
+</script>
+</body>
+</html>
