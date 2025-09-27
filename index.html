@@ -405,17 +405,7 @@
         <p id="messageBoxText"></p>
         <button id="messageBoxOk">OK</button>
     </div>
-<div id="context-menu" style="position: fixed; z-index: 1000; background: white; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: none; min-width: 150px; padding: 5px 0;">
-    <div id="context-add-remove" class="context-menu-item" style="padding: 6px 10px; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 14px;">
-        Add to desktop
-    </div>
-    <div class="context-menu-separator" style="height: 1px; background: #eee; margin: 4px 0;"></div>
-    <div id="context-move-top" class="context-menu-item" style="padding: 6px 10px; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 14px;">Move to top</div>
-    <div id="context-move-bottom" class="context-menu-item" style="padding: 6px 10px; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 14px;">Move to bottom</div>
-</div>
 
-<div id="desktop" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 1; padding: 20px;">
-</div>
     <script>
     document.addEventListener('DOMContentLoaded', () => {
 
@@ -1922,134 +1912,8 @@ document.addEventListener("DOMContentLoaded", () => {
 </script>
 
         
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-  // 1. Get DOM elements
-  const taskbarApps = document.querySelectorAll(".taskbar-app");
-  const desktop = document.getElementById("desktop");
-  const contextMenu = document.getElementById("context-menu");
-  const contextAddRemove = document.getElementById("context-add-remove");
-  const taskbarContainer = document.querySelector("#taskbar .app-container"); // Assuming your taskbar apps are inside a container with class 'app-container' inside the taskbar. Adjust if needed.
-
-  let targetTaskbarApp = null; // Stores the app element that was right-clicked
-
-  // 2. Core Functions
-  function hideContextMenu() {
-    contextMenu.style.display = "none";
-  }
-
-  function updateContextMenu() {
-    if (targetTaskbarApp) {
-      const isOnDesktop = targetTaskbarApp.dataset.isDesktop === "true";
-      contextAddRemove.textContent = isOnDesktop ? "Remove from desktop" : "Add to desktop";
-    }
-  }
-
-  function updateDesktop() {
-    taskbarApps.forEach(app => {
-      const appIcon = app.cloneNode(true);
-      appIcon.id = "desktop-" + app.id;
-      appIcon.style.position = "absolute"; // For desktop-like positioning
-      appIcon.style.top = "20px"; // Example position
-      appIcon.style.left = "20px"; // Example position
-      // Note: Full desktop icon management (positioning, drag-and-drop) is more complex.
-      // For this solution, we only toggle visibility and data-attribute.
-      app.dataset.isDesktop = localStorage.getItem("desktop-app-" + app.id) || "false";
-    });
-
-    // Move or hide the actual app icon based on the state
-    taskbarApps.forEach(app => {
-        // The original taskbar app element is what holds the state.
-        const isOnDesktop = app.dataset.isDesktop === "true";
-        const desktopAppClone = document.getElementById("desktop-clone-" + app.id);
-
-        if (isOnDesktop) {
-            // Create a clone to represent the app on the desktop, if it doesn't exist
-            if (!desktopAppClone) {
-                const clone = app.cloneNode(true);
-                clone.id = "desktop-clone-" + app.id;
-                clone.classList.add("desktop-icon");
-                clone.style.position = 'absolute';
-                clone.style.top = '20px'; // Simple default placement
-                clone.style.left = '20px';
-                // Remove existing right-click listener to avoid confusion (or re-implement desktop context menu)
-                clone.oncontextmenu = null; 
-                desktop.appendChild(clone);
-                app.style.display = 'block'; // Make sure the app is still visible in taskbar
-            } else {
-                desktopAppClone.style.display = 'block';
-            }
-        } else {
-            // Remove the clone from the desktop
-            if (desktopAppClone) {
-                desktopAppClone.remove();
-            }
-        }
-    });
-
-    // Re-run the initial app position logic from the existing file for persistence (optional)
-    // updateUserData(); 
-  }
-
-  // 3. Right-Click Listener (Context Menu Trigger)
-  taskbarApps.forEach(app => {
-    app.addEventListener("contextmenu", (e) => {
-      e.preventDefault();
-      
-      // Set the target app for context menu actions
-      targetTaskbarApp = app;
-      
-      // Update the menu text before showing it
-      updateContextMenu(); 
-      
-      // Show and position the context menu
-      contextMenu.style.left = `${e.clientX}px`;
-      contextMenu.style.top = `${e.clientY}px`;
-      contextMenu.style.display = "block";
-    });
-  });
-
-  // 4. "Add/Remove from desktop" Click Handler
-  contextAddRemove.addEventListener("click", () => {
-    if (targetTaskbarApp) {
-      const isOnDesktop = targetTaskbarApp.dataset.isDesktop === "true";
-      
-      // 1. Toggle the data attribute state
-      const newState = isOnDesktop ? "false" : "true";
-      targetTaskbarApp.dataset.isDesktop = newState;
-      
-      // 2. Persist the state (using localStorage for a simple solution)
-      localStorage.setItem("desktop-app-" + targetTaskbarApp.id, newState);
-
-      // 3. Update the visual desktop/taskbar icons
-      updateDesktop();
-
-      console.log(
-        isOnDesktop
-          ? `Removed ${targetTaskbarApp.id} from desktop`
-          : `Added ${targetTaskbarApp.id} to desktop`
-      );
-
-      hideContextMenu();
-    }
-  });
-
-  // 5. Global Click/Right-Click Handler to Hide Menu
-  document.addEventListener("click", (e) => {
-    if (!contextMenu.contains(e.target) && e.target !== taskbarContainer) {
-      hideContextMenu();
-    }
-  });
-  document.addEventListener("contextmenu", (e) => {
-    if (!e.target.closest(".taskbar-app")) {
-      hideContextMenu();
-    }
-  });
-
-  // 6. Initial Load: Check saved state and update the desktop
-  updateDesktop();
-});
-</script>
+        
+    
         
 
     
