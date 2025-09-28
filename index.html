@@ -426,21 +426,22 @@
         const messageBoxOk = document.getElementById('messageBoxOk');
 
         const APPS = [
-    { id: 'about', name: 'About', icon: 'fa-solid fa-info', color: '#222021', sourceUrl: 'https://mahi902.github.io/Aurora/About.html' },
-    { id: 'browser', name: 'Browser', icon: 'fa-solid fa-globe', color: '#3498db' },
-    { id: 'calculator', name: 'Calculator', icon: 'fa-solid fa-calculator', color: '#2ecc71', sourceUrl: 'https://mahi902.github.io/Aurora/calculator.html' },
-    { id: 'camera', name: 'Camera', icon: 'fa-solid fa-camera', color: '#1abc9c', sourceUrl: 'https://mahi902.github.io/Aurora/camera.html' },
-    { id: 'mail', name: 'Chat', icon: 'fa-solid fa-message', color: '#e74c3c', sourceUrl: 'https://mahi902.github.io/Aurora/chat.html' },
-    { id: 'clock', name: 'Clock', icon: 'fa-solid fa-clock', color: '#34495e', sourceUrl: 'https://mahi902.github.io/Aurora/clock.html' },
-    { id: 'example', name: 'Code Editor', icon: 'fa-solid fa-code', color: '#9b59b6', sourceUrl: 'https://mahi902.github.io/Aurora/frontendide.html' },
-    { id: 'dcmnteditor', name: 'Document Editor', icon: 'fa-solid fa-file', color: '#e67e22', sourceUrl: 'https://mahi902.github.io/Aurora/documenteditor.html' },
-    { id: 'discs', name: 'Discs', icon: 'fa-solid fa-compact-disc', color: '#f39c12', sourceUrl: 'https://mahi902.github.io/Aurora/discs.html' },
-    { id: 'files', name: 'Files', icon: 'fa-solid fa-folder', color: '#16a085', sourceUrl: 'https://mahi902.github.io/Aurora/files.html' },
-    { id: 'photos', name: 'Image Editor', icon: 'fa-solid fa-image', color: '#8e44ad', sourceUrl: 'https://mahi902.github.io/Aurora/imageeditor.html' },
-    { id: 'notes', name: 'Notes', icon: 'fa-solid fa-clipboard', color: '#f1c40f', sourceUrl: 'https://mahi902.github.io/Aurora/notes.html' },
-    { id: 'settings', name: 'Settings', icon: 'fa-solid fa-gears', color: '#95a5a6' },
-    { id: 'terminal', name: 'Word Finder', icon: 'fa-solid fa-font', color: '#d35400', sourceUrl: 'https://mahi902.github.io/Aurora/wordfinder.html' },
+    { id: 'about', name: 'About', icon: 'fa-solid fa-info', color: '#7f8c8d', sourceUrl: 'https://mahi902.github.io/Aurora/About.html' }, // neutral gray
+    { id: 'browser', name: 'Browser', icon: 'fa-solid fa-globe', color: '#2980b9' }, // web = deep blue
+    { id: 'calculator', name: 'Calculator', icon: 'fa-solid fa-calculator', color: '#27ae60', sourceUrl: 'https://mahi902.github.io/Aurora/calculator.html' }, // math = green
+    { id: 'camera', name: 'Camera', icon: 'fa-solid fa-camera', color: '#8e44ad', sourceUrl: 'https://mahi902.github.io/Aurora/camera.html' }, // camera lens = purple
+    { id: 'mail', name: 'Chat', icon: 'fa-solid fa-message', color: '#e67e22', sourceUrl: 'https://mahi902.github.io/Aurora/chat.html' }, // conversation = orange
+    { id: 'clock', name: 'Clock', icon: 'fa-solid fa-clock', color: '#34495e', sourceUrl: 'https://mahi902.github.io/Aurora/clock.html' }, // time = dark slate
+    { id: 'codeide', name: 'Code Editor', icon: 'fa-solid fa-code', color: '#16a085', sourceUrl: 'https://mahi902.github.io/Aurora/frontendide.html' }, // coding = teal
+    { id: 'dcmnteditor', name: 'Document Editor', icon: 'fa-solid fa-file', color: '#2c3e50', sourceUrl: 'https://mahi902.github.io/Aurora/documenteditor.html' }, // docs = dark navy
+    { id: 'discs', name: 'Discs', icon: 'fa-solid fa-compact-disc', color: '#c0392b', sourceUrl: 'https://mahi902.github.io/Aurora/discs.html' }, // CDs = red
+    { id: 'files', name: 'Files', icon: 'fa-solid fa-folder', color: '#f39c12', sourceUrl: 'https://mahi902.github.io/Aurora/files.html' }, // folders = yellow
+    { id: 'photos', name: 'Image Editor', icon: 'fa-solid fa-image', color: '#9b59b6', sourceUrl: 'https://mahi902.github.io/Aurora/imageeditor.html' }, // creative = violet
+    { id: 'notes', name: 'Notes', icon: 'fa-solid fa-clipboard', color: '#f1c40f', sourceUrl: 'https://mahi902.github.io/Aurora/notes.html' }, // sticky note yellow
+    { id: 'settings', name: 'Settings', icon: 'fa-solid fa-gears', color: '#95a5a6' }, // gear gray
+    { id: 'wf', name: 'Dictionary', icon: 'fa-solid fa-font', color: '#d35400', sourceUrl: 'https://mahi902.github.io/Aurora/wordfinder.html' }, // words/text = burnt orange
 ];
+        
 
 
         let zIndexCounter = 100;
