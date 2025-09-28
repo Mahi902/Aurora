@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RetroDisk Desktop Music Player</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-light: #ffffff; /* Changed to white */
+            --main-text: #1f2937;
+            --border-light: #e5e7eb; /* Lighter border for clean look */
+            --sidebar-width: 280px;
+        }
+        /* --- Desktop Look & Feel Adjustments --- */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-light); 
+            color: var(--main-text);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden; 
+            display: flex;
+        }
+        .desktop-window {
+            /* Now truly maximizes to fill the browser viewport */
+            height: 100vh; 
+            width: 100vw;
+            margin: 0; 
+            border-radius: 0; /* No rounded corners for maximized look */
+            box-shadow: none; /* Removed shadow */
+            background-color: white;
+            display: flex;
+            overflow: hidden;
+            border: none;
+        }
+        /* --- End Desktop Look & Feel Adjustments --- */
+
+        .disk-item {
+            cursor: pointer;
+            transition: background-color 0.15s;
+        }
+        .disk-item.selected {
+            background-color: #f3f4f6; /* Very light gray for selection */
+            font-weight: 600;
+        }
+        .player-control-icon {
+            transition: transform 0.1s, opacity 0.1s;
+        }
+        .player-control-icon:hover {
+            transform: scale(1.1);
+            color: #1d4ed8;
+        }
+        .player-control-icon:active {
+            transform: scale(0.95);
+            opacity: 0.8;
+        }
+        .modal-backdrop {
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+        /* Custom scrollbars */
+        .disk-list::-webkit-scrollbar, #player-content::-webkit-scrollbar {
+            width: 8px;
+        }
+        .disk-list::-webkit-scrollbar-thumb, #player-content::-webkit-scrollbar-thumb {
+            background-color: #ccc;
+            border-radius: 4px;
+        }
+        .disk-list::-webkit-scrollbar-track, #player-content::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        /* Drag and Drop styles */
+        .drop-area {
+            border: 2px dashed var(--border-light);
+            transition: border-color 0.3s;
+        }
+        .drop-area.drag-over {
+            border-color: #1d4ed8;
+            background-color: #eff6ff;
+        }
+    </style>
+</head>
+<body>
+
+<!-- The desktop-window now serves as the main application frame -->
+<div class="desktop-window">
+
+    <!-- Left Sidebar: Disk List -->
+    <div class="w-1/4 min-w-[var(--sidebar-width)] p-4 border-r border-gray-200 flex flex-col">
+        <!-- Adjusted font size and weight -->
+        <h2 class="text-lg font-semibold mb-4 text-gray-900">My Disks</h2>
+        
+        <!-- Storage Access Area -->
+        <div id="storage-area" class="pb-4 mb-4 border-b border-gray-200">
+            <button id="request-access-btn" class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-150 shadow-md">
+                Select Storage Folder
+            </button>
+        </div>
+
+        <!-- New Disk Button -->
+        <button id="new-disk-btn" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition duration-150 shadow-md mb-4" disabled>
+            + New Disk
+        </button>
+        
+        <!-- Disk List Container -->
+        <div id="disk-list" class="disk-list flex-grow overflow-y-auto space-y-1">
+            <p id="list-placeholder" class="text-gray-500 text-sm italic">
+                Load your storage folder to see disks.
+            </p>
+        </div>
+    </div>
+
+    <!-- Right Pane: Player -->
+    <div class="w-3/4 p-8 flex flex-col relative" id="player-pane">
+        
+        <!-- Top Right Menu -->
+        <div class="absolute top-4 right-4 z-10">
+            <button id="menu-toggle" class="p-2 rounded-full hover:bg-gray-100 transition relative" disabled>
+                <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path></svg>
+            </button>
+            <div id="menu-dropdown" class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-100 hidden">
+                <button class="menu-item w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-action="playback-speed">Playback Speed</button>
+                <button class="menu-item w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-action="download-mp3">Download MP3</button>
+                <button class="menu-item w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50" data-action="delete">Delete Disk</button>
+            </div>
+        </div>
+
+        <!-- FIX: Content now flows vertically and scrolls if necessary -->
+        <div id="player-content" class="flex flex-col items-center flex-grow text-center overflow-y-auto">
+            <p id="player-placeholder" class="text-gray-400 text-xl font-light py-8 mt-16">
+                Select a disk from the left to begin playback.
+            </p>
+
+            <!-- Disk Display Area (Added max-w-sm and controlled vertical padding) -->
+            <div id="disk-display" class="hidden w-full max-w-sm py-4">
+                <!-- Cover Image -->
+                <img id="disk-cover" class="w-full aspect-square object-cover rounded-xl shadow-2xl mb-6 mx-auto" src="https://placehold.co/500x500/e5e7eb/4b5563?text=Cover+Art" alt="Disk Cover">
+                
+                <!-- Disk Name: Reduced font size and weight -->
+                <h1 id="disk-name" class="text-2xl font-bold mb-6 text-gray-800 truncate">
+                    Disk Name
+                </h1>
+
+                <!-- Controls -->
+                <div class="flex justify-center items-center space-x-6">
+                    <button id="skip-back" class="text-gray-600 player-control-icon disabled:opacity-50" title="Skip Back">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 19l-7-7 7-7m5 14l-7-7 7-7"></path></svg>
+                    </button>
+                    
+                    <button id="rewind" class="text-gray-600 player-control-icon disabled:opacity-50" title="Rewind 10s">
+                        <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 14l-4 4 4 4V14zm0-10l-4 4 4 4V4zm8 10h-2v4h-2v-4h-2l3-3 3 3z"></path></svg>
+                    </button>
+                    
+                    <button id="play-pause-btn" class="text-blue-600 player-control-icon p-3 rounded-full bg-blue-100 shadow-lg" title="Play">
+                        <svg id="play-icon" class="w-12 h-12" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2H8c-1.1 0-2 .9-2 2v14z"></path></svg>
+                        <svg id="pause-icon" class="w-12 h-12 hidden" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M10 19a1 1 0 01-1-1V6a1 1 0 112 0v12a1 1 0 01-1 1zM15 19a1 1 0 01-1-1V6a1 1 0 112 0v12a1 1 0 01-1 1z"></path></svg>
+                    </button>
+                    
+                    <button id="forward" class="text-gray-600 player-control-icon disabled:opacity-50" title="Forward 10s">
+                        <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 14l4 4-4 4V14zm0-10l4 4-4 4V4zm-8 10h2v4h2v-4h2l-3-3-3 3z"></path></svg>
+                    </button>
+
+                    <button id="skip-next" class="text-gray-600 player-control-icon disabled:opacity-50" title="Skip Next">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 19l7-7-7-7m-5 14l7-7-7-7"></path></svg>
+                    </button>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="mt-8 w-full flex items-center space-x-3 text-sm text-gray-500">
+                    <span id="current-time">0:00</span>
+                    <input type="range" id="progress-bar" value="0" min="0" max="100" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                    <span id="duration">0:00</span>
+                </div>
+
+                <audio id="audio-player" class="hidden" controls></audio>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Container (New Disk, Confirmation, Playback Speed) -->
+<div id="modal-container" class="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+    <!-- Modal Content will be injected here -->
+</div>
+
+<script>
+    // --- Global Variables ---
+    let storageHandle = null;
+    const DISKS_FILE = 'disks.json';
+    let disks = [];
+    let currentDisk = null;
+    let audio = null;
+    let isPlaying = false;
+
+    // --- Utility Functions ---
+
+    /**
+     * Generates a simple unique ID (for file naming)
+     */
+    const generateUUID = () => crypto.randomUUID();
+
+    /**
+     * Converts seconds to MM:SS format
+     */
+    const formatTime = (seconds) => {
+        const min = Math.floor(seconds / 60);
+        const sec = Math.floor(seconds % 60);
+        return `${min}:${sec < 10 ? '0' : ''}${sec}`;
+    };
+    
+    /**
+     * Displays a custom message box instead of alert()
+     */
+    const showMessage = (title, message, type = 'info', onConfirm = null) => {
+        let confirmBtn = '';
+        let colorClass = '';
+
+        if (type === 'confirm') {
+            confirmBtn = '<button id="modal-confirm-btn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">Delete</button>';
+            colorClass = 'text-red-600';
+        } else {
+            colorClass = 'text-blue-600';
+        }
+
+        const modalContent = `
+            <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-sm">
+                <h3 class="text-xl font-bold mb-4 ${colorClass}">${title}</h3>
+                <p class="text-gray-700 mb-6">${message}</p>
+                <div class="flex justify-end space-x-3">
+                    <button id="modal-close-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition">
+                        ${type === 'confirm' ? 'Cancel' : 'OK'}
+                    </button>
+                    ${confirmBtn}
+                </div>
+            </div>
+        `;
+
+        document.getElementById('modal-container').innerHTML = modalContent;
+        document.getElementById('modal-container').classList.remove('hidden');
+
+        const closeBtn = document.getElementById('modal-close-btn');
+        const confirmBtnEl = document.getElementById('modal-confirm-btn');
+
+        const closeModal = () => document.getElementById('modal-container').classList.add('hidden');
+
+        closeBtn.onclick = closeModal;
+        
+        if (confirmBtnEl) {
+            confirmBtnEl.onclick = () => {
+                closeModal();
+                if (onConfirm) onConfirm();
+            };
+        }
+    };
+
+    /**
+     * Polyfill for showDirectoryPicker and checks compatibility.
+     */
+    const checkCompatibility = () => {
+        if (!('showDirectoryPicker' in window)) {
+            showMessage(
+                "Browser Incompatibility", 
+                "Your browser does not support the File System Access API (specifically showDirectoryPicker). This app will not function correctly.",
+                "error"
+            );
+            document.getElementById('request-access-btn').disabled = true;
+            return false;
+        }
+        return true;
+    };
+
+    // --- File System Access API Wrappers ---
+
+    /**
+     * Requests access to a local directory and persists the handle.
+     */
+    const requestAccess = async () => {
+        if (!checkCompatibility()) return;
+
+        try {
+            // Request the user to select a directory
+            const handle = await window.showDirectoryPicker();
+            storageHandle = handle;
+            
+            // Try to load existing data
+            await loadDisks();
+
+            // UI updates
+            document.getElementById('new-disk-btn').disabled = false;
+            document.getElementById('menu-toggle').disabled = false;
+            document.getElementById('storage-area').innerHTML = `
+                <p class="text-sm text-gray-700 truncate">
+                    Storage: <span class="font-mono bg-gray-100 p-1 rounded">${handle.name}</span>
+                </p>
+                <button id="reload-btn" class="w-full mt-2 text-sm text-blue-600 hover:text-blue-800 transition">
+                    Reload Folder
+                </button>
+            `;
+            document.getElementById('reload-btn').onclick = loadDisks;
+            showMessage("Success", `Storage folder '${handle.name}' loaded successfully!`);
+
+        } catch (error) {
+            console.error('Error requesting directory access:', error);
+            showMessage("Access Denied", "Directory access was denied or cancelled.", "error");
+        }
+    };
+    
+    /**
+     * Reads the disks.json file from the storage handle to populate the disk array.
+     */
+    const readDisksFile = async () => {
+        if (!storageHandle) return [];
+        try {
+            const fileHandle = await storageHandle.getFileHandle(DISKS_FILE, { create: true });
+            const file = await fileHandle.getFile();
+            if (file.size === 0) return []; // Empty file, start with empty list
+            const content = await file.text();
+            return JSON.parse(content);
+        } catch (e) {
+            console.warn('disks.json not found or corrupted. Initializing empty array.', e);
+            // File not found or failed to read/parse, treat as empty array
+            return [];
+        }
+    };
+
+    /**
+     * Writes the current disks array back to disks.json.
+     */
+    const writeDisksFile = async (data) => {
+        if (!storageHandle) return;
+        try {
+            const fileHandle = await storageHandle.getFileHandle(DISKS_FILE, { create: true });
+            const writable = await fileHandle.createWritable();
+            await writable.write(JSON.stringify(data, null, 2));
+            await writable.close();
+        } catch (e) {
+            console.error('Error writing disks.json:', e);
+            showMessage("File Write Error", "Could not save disk data to 'disks.json'. Check permissions.", "error");
+        }
+    };
+
+    /**
+     * Loads disks from storage, sorts them, and updates the UI.
+     */
+    const loadDisks = async () => {
+        disks = await readDisksFile();
+        
+        // Sort disks alphabetically by name
+        disks.sort((a, b) => a.name.localeCompare(b.name));
+        
+        renderDiskList();
+        
+        // Clear player content if no disk is selected
+        if (!currentDisk || !disks.find(d => d.id === currentDisk.id)) {
+            currentDisk = null;
+            if (audio) audio.pause();
+            document.getElementById('disk-display').classList.add('hidden');
+            document.getElementById('player-placeholder').classList.remove('hidden');
+        }
+    };
+
+    // --- UI Rendering ---
+
+    /**
+     * Updates the left sidebar list of disks.
+     */
+    const renderDiskList = () => {
+        const listContainer = document.getElementById('disk-list');
+        listContainer.innerHTML = '';
+        
+        if (disks.length === 0) {
+            listContainer.innerHTML = `<p class="text-gray-500 text-sm italic">No disks found. Click '+ New Disk' to create one.</p>`;
+            return;
+        }
+
+        disks.forEach(disk => {
+            const isSelected = currentDisk && currentDisk.id === disk.id;
+            const diskEl = document.createElement('div');
+            diskEl.className = `disk-item p-3 rounded-lg flex items-center space-x-3 ${isSelected ? 'selected' : 'hover:bg-gray-100'}`;
+            diskEl.setAttribute('data-disk-id', disk.id);
+            diskEl.innerHTML = `
+                <svg class="w-5 h-5 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm-7-8a7 7 0 1114 0 7 7 0 01-14 0z" clip-rule="evenodd"></path><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"></path></svg>
+                <span class="truncate text-sm">${disk.name}</span>
+            `;
+            diskEl.onclick = () => selectDisk(disk.id);
+            listContainer.appendChild(diskEl);
+        });
+    };
+
+    /**
+     * Selects a disk, updates the player, and loads the audio/cover.
+     */
+    const selectDisk = async (diskId) => {
+        const disk = disks.find(d => d.id === diskId);
+        if (!disk) return;
+
+        // Clear previous audio
+        if (audio) audio.pause();
+        currentDisk = disk;
+
+        // Update UI state
+        renderDiskList(); 
+        document.getElementById('player-placeholder').classList.add('hidden');
+        document.getElementById('disk-display').classList.remove('hidden');
+        document.getElementById('disk-name').textContent = disk.name;
+        document.getElementById('menu-toggle').disabled = false;
+
+        try {
+            // 1. Load Cover Image
+            const coverHandle = await storageHandle.getFileHandle(disk.coverFile);
+            const coverFile = await coverHandle.getFile();
+            const coverUrl = URL.createObjectURL(coverFile);
+            document.getElementById('disk-cover').src = coverUrl;
+
+            // 2. Load MP3 File
+            const mp3Handle = await storageHandle.getFileHandle(disk.mp3File);
+            const mp3File = await mp3Handle.getFile();
+            const mp3Url = URL.createObjectURL(mp3File);
+            
+            // Set audio source
+            audio.src = mp3Url;
+            audio.load();
+            
+        } catch (error) {
+            console.error('Error loading disk files:', error);
+            showMessage("File Read Error", `Could not read files for disk '${disk.name}'. They might have been deleted externally.`, "error");
+        }
+    };
+
+    // --- Modal Logic ---
+
+    /**
+     * Shows the New Disk creation modal.
+     */
+    const showNewDiskModal = () => {
+        const modalContainer = document.getElementById('modal-container');
+        modalContainer.innerHTML = `
+            <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg">
+                <h3 class="text-2xl font-bold mb-6 text-indigo-600">Create New Disk</h3>
+                
+                <input type="text" id="disk-name-input" placeholder="Disk Name (e.g., Chill Jams)" 
+                       class="w-full px-4 py-2 mb-4 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+
+                <!-- MP3 Drop/Click Area -->
+                <div id="mp3-drop-area" class="drop-area h-24 flex flex-col items-center justify-center mb-4 rounded-lg cursor-pointer p-4">
+                    <p id="mp3-status" class="text-gray-500 text-center">Drop MP3 File Here (.mp3) or Click to Select</p>
+                    <input type="file" id="mp3-file-input" accept="audio/mp3" class="hidden">
+                </div>
+                
+                <!-- Cover Drop/Click Area -->
+                <div id="cover-drop-area" class="drop-area h-24 flex flex-col items-center justify-center mb-6 rounded-lg cursor-pointer p-4">
+                    <p id="cover-status" class="text-gray-500 text-center">Drop Cover Image Here (.jpg/.png) or Click to Select</p>
+                    <input type="file" id="cover-file-input" accept="image/jpeg,image/png,image/webp" class="hidden">
+                </div>
+
+                <div class="flex justify-end space-x-3">
+                    <button id="modal-cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition">Cancel</button>
+                    <button id="modal-save-btn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50" disabled>Create Disk</button>
+                </div>
+            </div>
+        `;
+        modalContainer.classList.remove('hidden');
+
+        const mp3DropArea = document.getElementById('mp3-drop-area');
+        const coverDropArea = document.getElementById('cover-drop-area');
+        const mp3FileInput = document.getElementById('mp3-file-input');
+        const coverFileInput = document.getElementById('cover-file-input');
+        const saveBtn = document.getElementById('modal-save-btn');
+        let mp3File = null;
+        let coverFile = null;
+
+        const checkSaveButton = () => {
+            const name = document.getElementById('disk-name-input').value.trim();
+            saveBtn.disabled = !(name && mp3File && coverFile);
+        };
+        
+        /**
+         * Unified function to process file selection from drop or click events
+         */
+        const processFileSelection = (file, targetType) => {
+            if (!file) return false;
+
+            if (targetType === 'mp3' && file.type.startsWith('audio/')) {
+                mp3File = file;
+                document.getElementById('mp3-status').textContent = `MP3: ${file.name}`;
+                return true;
+            } else if (targetType === 'cover' && file.type.startsWith('image/')) {
+                coverFile = file;
+                document.getElementById('cover-status').textContent = `Cover: ${file.name}`;
+                return true;
+            } else {
+                showMessage("Invalid File Type", `Please provide a valid ${targetType === 'mp3' ? 'MP3 audio' : 'image'} file.`, "error");
+                return false;
+            }
+        };
+
+        // --- Event Listeners ---
+        
+        document.getElementById('disk-name-input').oninput = checkSaveButton;
+        document.getElementById('modal-cancel-btn').onclick = () => modalContainer.classList.add('hidden');
+        saveBtn.onclick = () => saveNewDisk(mp3File, coverFile);
+
+        // 1. Click-to-select functionality (proxies click to hidden input)
+        mp3DropArea.onclick = (e) => {
+             // Only proxy if the click wasn't already on the hidden input
+            if (e.target.id !== 'mp3-file-input') {
+                mp3FileInput.click();
+            }
+        };
+        coverDropArea.onclick = (e) => {
+            if (e.target.id !== 'cover-file-input') {
+                coverFileInput.click();
+            }
+        };
+
+        // 2. File Input Change handler (for selected files)
+        mp3FileInput.onchange = (e) => {
+            if (e.target.files.length) {
+                processFileSelection(e.target.files[0], 'mp3');
+                checkSaveButton();
+            }
+            // Clear input value to allow selecting the same file again if needed
+            e.target.value = null; 
+        };
+        coverFileInput.onchange = (e) => {
+            if (e.target.files.length) {
+                processFileSelection(e.target.files[0], 'cover');
+                checkSaveButton();
+            }
+            e.target.value = null;
+        };
+
+
+        // 3. Drag/Drop Handlers
+        const handleFileDrop = (event, targetType) => {
+            event.preventDefault();
+            event.target.classList.remove('drag-over');
+            const file = event.dataTransfer.files[0];
+            
+            if (!file) return;
+
+            processFileSelection(file, targetType);
+            checkSaveButton();
+        };
+
+        const addDropListeners = (element, type) => {
+            element.addEventListener('dragover', (e) => { e.preventDefault(); e.target.classList.add('drag-over'); });
+            element.addEventListener('dragleave', (e) => { e.preventDefault(); e.target.classList.remove('drag-over'); });
+            element.addEventListener('drop', (e) => handleFileDrop(e, type));
+        };
+
+        // Attach drag/drop listeners
+        addDropListeners(mp3DropArea, 'mp3');
+        addDropListeners(coverDropArea, 'cover');
+    };
+
+    /**
+     * Writes the new disk files to the storage handle and updates disks.json.
+     */
+    const saveNewDisk = async (mp3File, coverFile) => {
+        const diskName = document.getElementById('disk-name-input').value.trim();
+        document.getElementById('modal-container').classList.add('hidden');
+
+        if (!storageHandle || !diskName || !mp3File || !coverFile) {
+            showMessage("Missing Data", "Disk name, MP3, and cover file are required.", "error");
+            return;
+        }
+
+        const newId = generateUUID();
+        // NOTE: We rely on the dropped/selected file having the correct extension in its name for the cover file, 
+        // using the file type for safety in the processFileSelection function above.
+        const mp3FileName = `${newId}.mp3`;
+        const coverFileName = `${newId}.${coverFile.name.split('.').pop()}`; 
+
+        try {
+            // 1. Write MP3 file
+            const mp3Handle = await storageHandle.getFileHandle(mp3FileName, { create: true });
+            const mp3Writable = await mp3Handle.createWritable();
+            await mp3Writable.write(mp3File);
+            await mp3Writable.close();
+
+            // 2. Write Cover file
+            const coverHandle = await storageHandle.getFileHandle(coverFileName, { create: true });
+            const coverWritable = await coverHandle.createWritable();
+            await coverWritable.write(coverFile);
+            await coverWritable.close();
+
+            // 3. Update metadata
+            const newDisk = {
+                id: newId,
+                name: diskName,
+                mp3File: mp3FileName,
+                coverFile: coverFileName
+            };
+            
+            disks.push(newDisk);
+            await writeDisksFile(disks);
+
+            await loadDisks();
+            selectDisk(newId);
+            showMessage("Disk Created", `'${diskName}' has been saved to your local folder.`);
+
+        } catch (error) {
+            console.error('Error saving new disk:', error);
+            showMessage("Saving Failed", "Could not save files to the folder. Check your folder permissions.", "error");
+        }
+    };
+    
+    /**
+     * Shows a confirmation modal for deleting the current disk.
+     */
+    const showDeleteConfirmation = () => {
+        if (!currentDisk) return;
+        
+        showMessage(
+            "Confirm Deletion",
+            `Are you sure you want to delete the disk '${currentDisk.name}'? This action is permanent and will delete the files from your folder.`,
+            "confirm",
+            performDeleteDisk
+        );
+    };
+
+    /**
+     * Deletes the files associated with the current disk and updates disks.json.
+     */
+    const performDeleteDisk = async () => {
+        if (!currentDisk || !storageHandle) return;
+
+        const { id, name, mp3File, coverFile } = currentDisk;
+
+        try {
+            // 1. Delete media files from storage
+            await storageHandle.removeEntry(mp3File);
+            await storageHandle.removeEntry(coverFile);
+
+            // 2. Remove from disks array
+            disks = disks.filter(d => d.id !== id);
+            await writeDisksFile(disks);
+
+            // 3. Reset player and reload list
+            if (audio) audio.pause();
+            currentDisk = null;
+            await loadDisks();
+            document.getElementById('disk-display').classList.add('hidden');
+            document.getElementById('player-placeholder').classList.remove('hidden');
+            document.getElementById('menu-toggle').disabled = true;
+
+            showMessage("Disk Deleted", `'${name}' and its associated files have been deleted.`);
+
+        } catch (error) {
+            console.error('Error deleting disk:', error);
+            showMessage("Deletion Failed", `Could not delete disk '${name}'. Check if the files are still present or if permissions are revoked.`, "error");
+        }
+    };
+
+    // --- Menu Actions ---
+
+    const handleMenuAction = async (action) => {
+        if (!currentDisk) return;
+        
+        switch(action) {
+            case 'playback-speed':
+                showPlaybackSpeedModal();
+                break;
+            case 'download-mp3':
+                await downloadMp3();
+                break;
+            case 'delete':
+                showDeleteConfirmation();
+                break;
+        }
+        // Hide dropdown
+        document.getElementById('menu-dropdown').classList.add('hidden');
+    };
+
+    const showPlaybackSpeedModal = () => {
+        const currentRate = audio ? audio.playbackRate : 1.0;
+        const modalContainer = document.getElementById('modal-container');
+        modalContainer.innerHTML = `
+            <div class="bg-white p-6 rounded-xl shadow-2xl w-full max-w-xs">
+                <h3 class="text-xl font-bold mb-4 text-blue-600">Playback Speed</h3>
+                <input type="range" id="speed-slider" value="${currentRate * 10}" min="5" max="20" step="1" 
+                       class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                <p class="text-center mt-2 text-lg font-mono" id="speed-value">${currentRate.toFixed(1)}x</p>
+                
+                <div class="flex justify-end space-x-3 mt-6">
+                    <button id="modal-close-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition">Close</button>
+                    <button id="modal-reset-btn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">Reset (1.0x)</button>
+                </div>
+            </div>
+        `;
+        modalContainer.classList.remove('hidden');
+
+        const slider = document.getElementById('speed-slider');
+        const speedValue = document.getElementById('speed-value');
+
+        const updateSpeed = (rate) => {
+            if (audio) audio.playbackRate = rate;
+            speedValue.textContent = `${rate.toFixed(1)}x`;
+            slider.value = rate * 10;
+        };
+
+        slider.oninput = (e) => {
+            const rate = e.target.value / 10;
+            updateSpeed(rate);
+        };
+        
+        document.getElementById('modal-reset-btn').onclick = () => updateSpeed(1.0);
+        document.getElementById('modal-close-btn').onclick = () => modalContainer.classList.add('hidden');
+    };
+
+    const downloadMp3 = async () => {
+        if (!currentDisk || !storageHandle) return;
+
+        try {
+            const mp3Handle = await storageHandle.getFileHandle(currentDisk.mp3File);
+            const mp3File = await mp3Handle.getFile();
+
+            const url = URL.createObjectURL(mp3File);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${currentDisk.name}.mp3`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showMessage("Download Started", `'${currentDisk.name}.mp3' should be downloading now.`);
+
+        } catch (error) {
+            console.error('Download error:', error);
+            showMessage("Download Failed", "Could not prepare file for download.", "error");
+        }
+    };
+
+
+    // --- Audio Control Logic ---
+
+    const initAudioControls = () => {
+        audio = document.getElementById('audio-player');
+        
+        const playPauseBtn = document.getElementById('play-pause-btn');
+        const playIcon = document.getElementById('play-icon');
+        const pauseIcon = document.getElementById('pause-icon');
+        const progressBar = document.getElementById('progress-bar');
+        const currentTimeEl = document.getElementById('current-time');
+        const durationEl = document.getElementById('duration');
+
+        // Play/Pause Toggle
+        playPauseBtn.onclick = () => {
+            if (!currentDisk) return;
+            if (audio.paused) {
+                audio.play();
+            } else {
+                audio.pause();
+            }
+        };
+
+        // State listeners
+        audio.onplay = () => {
+            isPlaying = true;
+            playIcon.classList.add('hidden');
+            pauseIcon.classList.remove('hidden');
+            playPauseBtn.title = 'Pause';
+        };
+
+        audio.onpause = () => {
+            isPlaying = false;
+            playIcon.classList.remove('hidden');
+            pauseIcon.classList.add('hidden');
+            playPauseBtn.title = 'Play';
+        };
+        
+        audio.onloadedmetadata = () => {
+            durationEl.textContent = formatTime(audio.duration);
+            progressBar.max = audio.duration;
+            audio.play();
+        };
+
+        audio.ontimeupdate = () => {
+            currentTimeEl.textContent = formatTime(audio.currentTime);
+            progressBar.value = audio.currentTime;
+        };
+        
+        audio.onended = () => {
+            // Automatically skip to the next track if available
+            handleSkip(1); 
+        }
+
+        // Progress Bar Seek
+        progressBar.oninput = () => {
+            audio.currentTime = progressBar.value;
+        };
+        
+        // Skip/Rewind (10 seconds)
+        document.getElementById('rewind').onclick = () => {
+            if (currentDisk) audio.currentTime = Math.max(0, audio.currentTime - 10);
+        };
+        document.getElementById('forward').onclick = () => {
+            if (currentDisk) audio.currentTime = Math.min(audio.duration, audio.currentTime + 10);
+        };
+        
+        // Skip Next/Back logic
+        const handleSkip = (direction) => {
+            if (!currentDisk || disks.length <= 1) return;
+
+            const currentIndex = disks.findIndex(d => d.id === currentDisk.id);
+            let newIndex = currentIndex + direction;
+
+            if (newIndex >= disks.length) newIndex = 0; // Wrap to start
+            if (newIndex < 0) newIndex = disks.length - 1; // Wrap to end
+
+            selectDisk(disks[newIndex].id);
+        };
+
+        document.getElementById('skip-back').onclick = () => handleSkip(-1);
+        document.getElementById('skip-next').onclick = () => handleSkip(1);
+    };
+
+    // --- Initialization ---
+    document.addEventListener('DOMContentLoaded', () => {
+        // Find and attach event listeners to main UI elements
+        const requestAccessBtn = document.getElementById('request-access-btn');
+        const newDiskBtn = document.getElementById('new-disk-btn');
+        const menuToggle = document.getElementById('menu-toggle');
+        const menuDropdown = document.getElementById('menu-dropdown');
+
+        requestAccessBtn.onclick = requestAccess;
+        newDiskBtn.onclick = showNewDiskModal;
+
+        menuToggle.onclick = () => {
+            menuDropdown.classList.toggle('hidden');
+        };
+
+        // Handle clicks outside the menu dropdown
+        document.addEventListener('click', (e) => {
+            if (menuToggle && menuDropdown && !menuToggle.contains(e.target) && !menuDropdown.contains(e.target)) {
+                menuDropdown.classList.add('hidden');
+            }
+        });
+
+        // Handle menu item clicks
+        menuDropdown.querySelectorAll('.menu-item').forEach(item => {
+            item.onclick = (e) => handleMenuAction(e.target.dataset.action);
+        });
+
+        // Initialize audio player and controls
+        initAudioControls();
+
+        // Check for File System Access API support on load
+        checkCompatibility();
+    });
+</script>
+
+</body>
+</html>
