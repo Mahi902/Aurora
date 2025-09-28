@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Computer Style Calendar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary-accent': '#3b82f6', // Tailwind blue-500
+                        'light-bg': '#f9fafb', // Gray-50
+                        'border-light': '#e5e7eb', // Gray-200
+                        'text-dark': '#1f2937', // Gray-800
+                        'today-bg': '#eff6ff', // Blue-50 for today's cell background
+                        'flash-bg': '#d1d5db', // Gray-300 for the flash effect 
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', 'monospace'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Base styles for clean computer aesthetic */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #e5e7eb; /* Light gray background for contrast */
+            padding: 1rem;
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+        }
+        .day-cell {
+            min-height: 100px;
+            padding: 8px;
+            cursor: pointer;
+            transition: background-color 0.15s;
+            border-bottom: 1px solid theme('colors.border-light');
+            border-right: 1px solid theme('colors.border-light');
+        }
+        .day-cell:nth-child(7n) {
+            border-right: none;
+        }
+        /* MODIFICATION: Prevent hover background from overriding the highlight on today's cell */
+        .day-cell:hover:not(.current-month-disabled):not(.today-cell) { 
+            background-color: #f3f4f6; /* Gray-100 */
+        }
+        /* Highlight Today (PERMANENT) */
+        .today-cell { 
+            /* Set permanent border */
+            border: 2px solid theme('colors.primary-accent') !important;
+            /* Set permanent background. Removed !important so .flashing can override it briefly */
+            background-color: theme('colors.flash-bg'); 
+            position: relative;
+            z-index: 10;
+        }
+        /* Style for the temporary flash effect */
+        /* MODIFICATION: Change flashing to use the white base and blue border for the visual "pulse" */
+        .flashing { 
+            background-color: theme('colors.primary-accent') !important; /* Flash solid blue */
+            border-color: theme('colors.primary-accent') !important;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.7); /* Stronger shadow */
+            color: white !important; /* Text turns white during flash */
+            transition: background-color 0.05s ease-in-out, box-shadow 0.05s ease-in-out;
+        }
+
+        .day-number {
+            font-weight: 600;
+            font-family: theme('fontFamily.mono');
+        }
+        .event-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 9999px;
+            background-color: theme('colors.primary-accent');
+        }
+
+        /* Modal specific styles */
+        .modal-backdrop {
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+        .modal-content {
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Responsive adjustments for mobile/smaller screens */
+        @media (max-width: 640px) {
+            .day-cell {
+                min-height: 70px;
+                padding: 4px;
+            }
+            .event-dot {
+                width: 5px;
+                height: 5px;
+            }
+            .calendar-container {
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-start justify-center text-text-dark">
+
+    <div class="calendar-container w-full max-w-7xl mt-4 md:mt-10 bg-white p-4 md:p-8 rounded-xl shadow-2xl border border-border-light">
+
+        <div class="md:grid md:grid-cols-3 md:gap-8">
+
+            <div class="md:col-span-2">
+                <header class="flex justify-between items-center mb-6 border-b border-border-light pb-4">
+                    <h1 id="month-year-display" class="text-3xl font-bold font-mono text-primary-accent tracking-tighter"></h1>
+                    <div class="flex space-x-2">
+                        <button id="prev-month" class="p-2 w-10 h-10 rounded-lg border border-border-light hover:bg-light-bg transition flex items-center justify-center shadow-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                        </button>
+                        <button id="today-btn" class="px-4 py-2 text-sm font-semibold rounded-lg bg-light-bg text-text-dark border border-border-light hover:bg-border-light transition shadow-sm">Today</button>
+                        <button id="next-month" class="p-2 w-10 h-10 rounded-lg border border-border-light hover:bg-light-bg transition flex items-center justify-center shadow-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        </button>
+                    </div>
+                </header>
+
+                <div class="calendar-grid text-center text-xs font-semibold uppercase tracking-wider mb-2 text-gray-500 border-x border-t border-border-light rounded-t-lg overflow-hidden">
+                    <div class="p-2 border-r border-border-light">Sun</div>
+                    <div class="p-2 border-r border-border-light">Mon</div>
+                    <div class="p-2 border-r border-border-light">Tue</div>
+                    <div class="p-2 border-r border-border-light">Wed</div>
+                    <div class="p-2 border-r border-border-light">Thu</div>
+                    <div class="p-2 border-r border-border-light">Fri</div>
+                    <div class="p-2">Sat</div>
+                </div>
+
+                <div id="calendar-body" class="calendar-grid border-x border-b border-border-light rounded-b-lg">
+                    </div>
+            </div>
+
+            <div class="mt-8 md:mt-0 md:col-span-1 border-t md:border-t-0 md:border-l border-border-light pt-6 md:pl-6">
+                <h2 class="text-xl font-bold mb-4 text-text-dark border-b pb-2">Upcoming Events</h2>
+                <div id="upcoming-events-list" class="space-y-3 max-h-[70vh] overflow-y-auto pr-2">
+                    </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="event-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-backdrop transition-opacity duration-300">
+        <div class="modal-content bg-white w-full max-w-md p-6 rounded-xl border border-border-light transition-transform duration-300 transform scale-95 md:scale-100">
+            <h2 id="modal-title" class="text-xl font-bold mb-4 border-b pb-2"></h2>
+
+            <div id="event-list" class="space-y-3 mb-6 max-h-60 overflow-y-auto pr-2">
+                <p id="no-events-msg" class="text-gray-500 italic text-sm">No events planned for this date.</p>
+            </div>
+
+            <h3 class="font-semibold mb-2">Add New Event</h3>
+            <form id="add-event-form" class="space-y-3">
+                <input type="text" id="event-title-input" placeholder="Event Title" required
+                        class="w-full p-2 border border-border-light rounded-lg focus:ring-primary-accent focus:border-primary-accent text-sm">
+                <div class="flex space-x-2">
+                    <input type="time" id="event-time-input" value="09:00" required
+                            class="w-1/3 p-2 border border-border-light rounded-lg focus:ring-primary-accent focus:border-primary-accent text-sm">
+                    <button type="submit" class="w-2/3 bg-primary-accent text-white py-2 rounded-lg hover:bg-blue-600 transition text-sm font-semibold">
+                        Add Event
+                    </button>
+                </div>
+            </form>
+
+            <button id="close-modal" class="mt-4 w-full text-sm text-gray-600 border border-border-light py-1.5 rounded-lg hover:bg-light-bg transition">Close</button>
+        </div>
+    </div>
+
+    <script type="module">
+        // --- Firebase/Canvas Boilerplate (Required, but not used for data storage here) ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        setLogLevel('Debug');
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        let firebaseConfig;
+        try {
+            firebaseConfig = JSON.parse(__firebase_config);
+        } catch {
+            console.error("Firebase config is missing or invalid.");
+            firebaseConfig = {}; // Fallback
+        }
+
+        let db, auth;
+        let userId = 'anon';
+
+        try {
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+
+            // Auth function for the environment
+            async function initializeAuth() {
+                try {
+                    if (typeof __initial_auth_token !== 'undefined') {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                } catch (error) {
+                    console.error("Firebase Auth failed:", error);
+                    await signInAnonymously(auth);
+                }
+            }
+
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    userId = user.uid;
+                } else {
+                    userId = crypto.randomUUID();
+                }
+            });
+
+            initializeAuth();
+        } catch (e) {
+            console.error("Failed to initialize Firebase:", e);
+        }
+        // --- End of Firebase Boilerplate ---
+
+        // --- Calendar Application Logic (Using localStorage) ---
+        const calendarBody = document.getElementById('calendar-body');
+        const monthYearDisplay = document.getElementById('month-year-display');
+        const prevMonthBtn = document.getElementById('prev-month');
+        const nextMonthBtn = document.getElementById('next-month');
+        const todayBtn = document.getElementById('today-btn');
+        const eventModal = document.getElementById('event-modal');
+        const closeModalBtn = document.getElementById('close-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const eventList = document.getElementById('event-list');
+        const upcomingEventsList = document.getElementById('upcoming-events-list');
+        const noEventsMsg = document.getElementById('no-events-msg');
+        const addEventForm = document.getElementById('add-event-form');
+        const eventTitleInput = document.getElementById('event-title-input');
+        const eventTimeInput = document.getElementById('event-time-input');
+
+        let currentDate = new Date();
+        let currentYear = currentDate.getFullYear();
+        let currentMonth = currentDate.getMonth(); // 0-indexed
+        let selectedDateString = null; // 'YYYY-MM-DD'
+
+        let events = loadEvents();
+
+        /**
+         * Loads event data from the browser's localStorage.
+         * @returns {Object} The stored events object.
+         */
+        function loadEvents() {
+            try {
+                const storedEvents = localStorage.getItem('calendarEvents');
+                return storedEvents ? JSON.parse(storedEvents) : {};
+            } catch (e) {
+                console.error("Error loading events from localStorage:", e);
+                return {};
+            }
+        }
+
+        /**
+         * Saves the current events object to the browser's localStorage.
+         */
+        function saveEvents() {
+            try {
+                localStorage.setItem('calendarEvents', JSON.stringify(events));
+            } catch (e) {
+                console.error("Error saving events to localStorage:", e);
+            }
+            renderUpcomingEvents(); // Update the sidebar list after saving
+        }
+
+        /**
+         * Formats a Date object into a 'YYYY-MM-DD' string.
+         * @param {Date} date - The date object.
+         * @returns {string} The formatted date string.
+         */
+        function formatDate(date) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        /**
+         * Renders the calendar grid for the current month and year.
+         */
+        function renderCalendar() {
+            calendarBody.innerHTML = '';
+            const today = formatDate(new Date());
+
+            // Get month name and year for display
+            const dateTitle = new Date(currentYear, currentMonth);
+            monthYearDisplay.textContent = dateTitle.toLocaleString('en-US', { month: 'long', year: 'numeric' }).toUpperCase();
+
+            const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+            const daysInPrevMonth = new Date(currentYear, currentMonth, 0).getDate();
+
+            const totalCells = 42;
+            let dayCounter = 1;
+
+            for (let i = 0; i < totalCells; i++) {
+                const dayCell = document.createElement('div');
+                dayCell.classList.add('day-cell', 'relative');
+
+                let date;
+                let isCurrentMonth = false;
+
+                if (i < firstDayOfMonth) {
+                    const day = daysInPrevMonth - firstDayOfMonth + i + 1;
+                    date = new Date(currentYear, currentMonth - 1, day);
+                    dayCell.classList.add('bg-light-bg', 'text-gray-400', 'current-month-disabled');
+                    dayCell.style.cursor = 'default';
+                } else if (dayCounter <= daysInMonth) {
+                    date = new Date(currentYear, currentMonth, dayCounter);
+                    dayCell.classList.add('bg-white', 'text-text-dark');
+                    isCurrentMonth = true;
+                    dayCounter++;
+                } else {
+                    const day = dayCounter - daysInMonth;
+                    date = new Date(currentYear, currentMonth + 1, day);
+                    dayCell.classList.add('bg-light-bg', 'text-gray-400', 'current-month-disabled');
+                    dayCell.style.cursor = 'default';
+                    dayCounter++;
+                }
+
+                const dateString = formatDate(date);
+                const dayNumber = isCurrentMonth ? date.getDate() : date.getDate();
+
+                // Day Number Element
+                const dayNumberEl = document.createElement('span');
+                dayNumberEl.classList.add('day-number', 'absolute', 'top-2', 'right-2');
+                dayNumberEl.textContent = dayNumber;
+                dayCell.appendChild(dayNumberEl);
+
+                // Set data-date attribute for flashing (even if disabled)
+                dayCell.setAttribute('data-date', dateString);
+
+
+                // Add today marker
+                if (dateString === today && isCurrentMonth) {
+                    dayCell.classList.add('today-cell');
+                    // Add text color class to make sure text is visible over the gray background
+                    dayNumberEl.classList.add('text-primary-accent');
+                }
+
+                // Check for events
+                if (events[dateString] && events[dateString].length > 0) {
+                    const eventCountEl = document.createElement('div');
+                    eventCountEl.classList.add('absolute', 'bottom-2', 'left-2', 'flex', 'items-center', 'space-x-1', 'text-xs', 'font-semibold', 'text-primary-accent');
+                    eventCountEl.innerHTML = `<span class="event-dot"></span><span class="hidden sm:inline">${events[dateString].length} Events</span>`;
+                    dayCell.appendChild(eventCountEl);
+                }
+
+                // Attach click listener for current month days only
+                if (isCurrentMonth) {
+                    dayCell.addEventListener('click', () => openEventModal(dateString));
+                }
+
+                calendarBody.appendChild(dayCell);
+            }
+            renderUpcomingEvents();
+        }
+
+        /**
+         * Renders the list of upcoming events in the right sidebar.
+         */
+        function renderUpcomingEvents() {
+            upcomingEventsList.innerHTML = '';
+            const now = new Date();
+            const todayString = formatDate(now);
+            
+            let allUpcomingEvents = [];
+
+            // Iterate through all stored dates
+            Object.keys(events).forEach(dateString => {
+                // Filter out past dates (keep today or future)
+                if (dateString >= todayString && events[dateString].length > 0) {
+                    events[dateString].forEach(event => {
+                        allUpcomingEvents.push({
+                            ...event,
+                            dateString: dateString
+                        });
+                    });
+                }
+            });
+
+            // Sort by date (ascending) and then by time (ascending)
+            allUpcomingEvents.sort((a, b) => {
+                if (a.dateString !== b.dateString) {
+                    return a.dateString.localeCompare(b.dateString);
+                }
+                return a.time.localeCompare(b.time);
+            });
+
+            if (allUpcomingEvents.length === 0) {
+                upcomingEventsList.innerHTML = '<p class="text-gray-500 italic text-sm">No upcoming events are scheduled.</p>';
+                return;
+            }
+            
+            // Render the list
+            allUpcomingEvents.slice(0, 15).forEach(event => { // Limit to 15 upcoming events for brevity
+                const eventDate = new Date(event.dateString);
+                const displayDate = eventDate.toLocaleString('en-US', { day: 'numeric', month: 'short' });
+                
+                const item = document.createElement('div');
+                item.classList.add('p-3', 'bg-light-bg', 'rounded-lg', 'border', 'border-border-light', 'shadow-sm', 'cursor-pointer', 'event-list-item'); 
+                item.setAttribute('data-date', event.dateString); 
+                item.innerHTML = `
+                    <div class="flex justify-between items-center text-xs font-mono text-primary-accent mb-1">
+                        <span>${displayDate} @ ${event.time}</span>
+                    </div>
+                    <p class="font-semibold text-sm text-text-dark">${event.title}</p>
+                `;
+                upcomingEventsList.appendChild(item);
+            });
+        }
+
+        /**
+         * Flashes a specific date cell in the calendar twice.
+         * @param {string} dateString - The 'YYYY-MM-DD' string of the cell to flash.
+         */
+        function flashDateCell(dateString) {
+            // Check if the date is visible in the current month view
+            const targetDate = new Date(dateString);
+            if (targetDate.getFullYear() !== currentYear || targetDate.getMonth() !== currentMonth) {
+                // If the date is not in the current view, navigate to it first
+                currentYear = targetDate.getFullYear();
+                currentMonth = targetDate.getMonth();
+                renderCalendar();
+                // We'll call flash after the render, which might take a tiny moment, but it's simpler
+                setTimeout(() => _performFlash(dateString, 2), 50); 
+            } else {
+                _performFlash(dateString, 2);
+            }
+        }
+
+        function _performFlash(dateString, count) {
+            const cell = document.querySelector(`.day-cell[data-date="${dateString}"]`);
+            if (!cell) return;
+            
+            const flashDuration = 150; // Milliseconds for one flash cycle (on+off)
+            const flashClass = 'flashing';
+            
+            for (let i = 0; i < count; i++) {
+                setTimeout(() => {
+                    cell.classList.add(flashClass);
+                }, i * flashDuration * 2);
+
+                setTimeout(() => {
+                    // MODIFICATION: Do NOT remove the today-cell class.
+                    // This ensures the permanent highlight remains if it's the current date.
+                    if (!cell.classList.contains('today-cell')) { 
+                        cell.classList.remove(flashClass);
+                    } else {
+                        // If it is the today-cell, just remove the flash effect, but keep the today-cell class
+                        cell.classList.remove(flashClass); 
+                    }
+                }, i * flashDuration * 2 + flashDuration);
+            }
+        }
+
+
+        /**
+         * Opens the event modal for a specific date.
+         * @param {string} dateString - The 'YYYY-MM-DD' string of the selected date.
+         */
+        function openEventModal(dateString) {
+            selectedDateString = dateString;
+            modalTitle.textContent = `Events for ${dateString}`;
+            addEventForm.reset();
+            eventTimeInput.value = '09:00';
+
+            renderEventList(dateString);
+
+            eventModal.classList.remove('hidden');
+        }
+
+        /**
+         * Closes the event modal.
+         */
+        function closeEventModal() {
+            eventModal.classList.add('hidden');
+            selectedDateString = null;
+        }
+
+        /**
+         * Renders the list of events for a given date in the modal.
+         * @param {string} dateString - The 'YYYY-MM-DD' string.
+         */
+        function renderEventList(dateString) {
+            eventList.innerHTML = '';
+            const dayEvents = events[dateString] || [];
+
+            if (dayEvents.length === 0) {
+                noEventsMsg.classList.remove('hidden');
+            } else {
+                noEventsMsg.classList.add('hidden');
+                // Sort events by time
+                dayEvents.sort((a, b) => (a.time > b.time) ? 1 : -1);
+
+                dayEvents.forEach(event => {
+                    const item = document.createElement('div');
+                    item.id = `event-${event.id}`;
+                    item.classList.add('flex', 'justify-between', 'items-center', 'p-3', 'bg-white', 'rounded-lg', 'border', 'border-primary-accent/30');
+                    item.innerHTML = `
+                        <div class="flex-grow">
+                            <p class="font-semibold text-text-dark">${event.title}</p>
+                            <p class="text-xs text-gray-500 font-mono">${event.time}</p>
+                        </div>
+                        <button data-id="${event.id}" class="delete-event-btn text-red-500 hover:text-red-700 p-1 rounded-full transition" aria-label="Delete Event">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    `;
+                    eventList.appendChild(item);
+                });
+            }
+        }
+
+        /**
+         * Adds a new event to the events object and saves it.
+         */
+        function addEvent(dateString, title, time) {
+            if (!dateString) return;
+
+            const newEvent = {
+                id: crypto.randomUUID(),
+                title: title.trim(),
+                time: time,
+            };
+
+            if (!events[dateString]) {
+                events[dateString] = [];
+            }
+            events[dateString].push(newEvent);
+
+            saveEvents();
+            renderCalendar(); // Refresh calendar dots and list
+            renderEventList(dateString); // Refresh modal list
+        }
+
+        /**
+         * Deletes an event by ID from the current date.
+         */
+        function deleteEvent(eventId) {
+            if (!selectedDateString) return;
+
+            const dateEvents = events[selectedDateString];
+            if (dateEvents) {
+                events[selectedDateString] = dateEvents.filter(event => event.id !== eventId);
+
+                if (events[selectedDateString].length === 0) {
+                    delete events[selectedDateString];
+                }
+
+                saveEvents();
+                renderCalendar();
+                renderEventList(selectedDateString);
+            }
+        }
+
+        /**
+         * Plays a simple chime sound using the Web Audio API.
+         */
+        function playChime() {
+            try {
+                // Ensure audio context is resumable if needed (iOS/Safari limitation)
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                const audioCtx = new AudioContext();
+
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); 
+
+                gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0.5, audioCtx.currentTime + 0.05);
+                gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.5); 
+
+                oscillator.start();
+                oscillator.stop(audioCtx.currentTime + 0.5);
+
+                console.log("Event alarm triggered!");
+            } catch (e) {
+                console.warn("Audio API not available or failed to start:", e);
+                // User may need to interact with the page first for audio to work.
+            }
+        }
+
+        /**
+         * Checks every minute if an event is due and triggers the chime.
+         */
+        function setupAlarmChecker() {
+            setInterval(() => {
+                const now = new Date();
+                const currentDateString = formatDate(now);
+                // Get time in HH:MM format (e.g., "09:05")
+                const currentTimeString = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+                const todayEvents = events[currentDateString] || [];
+
+                // Find events exactly matching the current date and minute
+                const matchingEvent = todayEvents.find(event => event.time === currentTimeString);
+
+                if (matchingEvent) {
+                    playChime();
+                }
+            }, 60000); // Check every 60 seconds (1 minute)
+        }
+
+
+        // --- Event Listeners ---
+
+        // Handle form submission for adding an event
+        addEventForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const title = eventTitleInput.value;
+            const time = eventTimeInput.value;
+
+            if (title && time) {
+                addEvent(selectedDateString, title, time);
+                eventTitleInput.value = ''; // Clear input field
+            }
+        });
+
+        // Handle closing the modal
+        closeModalBtn.addEventListener('click', closeEventModal);
+        eventModal.addEventListener('click', function(e) {
+            if (e.target === eventModal) {
+                closeEventModal();
+            }
+        });
+
+        // Handle delete button clicks within the event list (delegation)
+        eventList.addEventListener('click', function(e) {
+            const deleteBtn = e.target.closest('.delete-event-btn');
+            if (deleteBtn) {
+                const eventId = deleteBtn.getAttribute('data-id');
+                deleteEvent(eventId);
+            }
+        });
+        
+        // Handle click on upcoming events to flash the date cell
+        upcomingEventsList.addEventListener('click', function(e) {
+            const eventItem = e.target.closest('.event-list-item');
+            if (eventItem) {
+                const dateToFlash = eventItem.getAttribute('data-date');
+                flashDateCell(dateToFlash);
+            }
+        });
+
+
+        // Navigation controls
+        prevMonthBtn.addEventListener('click', () => {
+            currentMonth--;
+            if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            }
+            renderCalendar();
+        });
+
+        nextMonthBtn.addEventListener('click', () => {
+            currentMonth++;
+            if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            }
+            renderCalendar();
+        });
+
+        todayBtn.addEventListener('click', () => {
+            currentDate = new Date();
+            currentYear = currentDate.getFullYear();
+            currentMonth = currentDate.getMonth();
+            flashDateCell(formatDate(currentDate)); // Flash and navigate to today
+        });
+
+        // Initial setup on load
+        window.onload = function() {
+            renderCalendar();
+            setupAlarmChecker(); // Start the minute-by-minute alarm checker
+        };
+
+    </script>
+</body>
+</html>
