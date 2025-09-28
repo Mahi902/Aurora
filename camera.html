@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Desktop Camera</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        /* Custom styles for the camera and gallery */
+        .camera-container, .gallery-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #video-feed {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1); /* Mirror effect for front camera */
+        }
+        
+        #video-feed.rear-camera {
+            transform: scaleX(1); /* No mirror for rear camera */
+        }
+        
+        .snap-effect {
+            animation: snap-animation 0.3s ease-out;
+        }
+
+        @keyframes snap-animation {
+            0% { box-shadow: 0 0 0 0px rgba(255, 255, 255, 0.7); }
+            50% { box-shadow: 0 0 0 12px rgba(255, 255, 255, 0.7); }
+            100% { box-shadow: 0 0 0 0px rgba(255, 255, 255, 0.7); }
+        }
+
+        /* Hide scrollbars for a cleaner look */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
+
+        .ratio-1-1 { aspect-ratio: 1 / 1; }
+        .ratio-4-3 { aspect-ratio: 4 / 3; }
+        .ratio-16-9 { aspect-ratio: 16 / 9; }
+        .ratio-full { width: 100%; height: 100%; }
+
+        .video-wrapper {
+             max-width: 90vw;
+             max-height: 80vh;
+             transition: all 0.3s ease-in-out;
+        }
+        
+        /* Toast Notification */
+        #toast {
+            position: fixed;
+            bottom: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 500;
+            color: white;
+            transition: bottom 0.5s ease-in-out;
+            z-index: 100;
+        }
+        #toast.show {
+            bottom: 30px;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 overflow-hidden">
+
+    <!-- Permission Overlay -->
+    <div id="permission-overlay" class="absolute inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-lg shadow-2xl p-8 max-w-lg w-full text-center">
+            <div class="flex justify-center mb-6">
+                <svg class="w-16 h-16 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+            </div>
+            <h2 class="text-2xl font-bold mb-2">Camera & Folder Access</h2>
+            <p class="text-gray-600 mb-6">This app needs permission to use your camera and access a folder on your device to save and view photos. Your files are not uploaded anywhere.</p>
+            <div class="space-y-4">
+                <button id="grant-camera" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition-transform transform hover:scale-105">
+                    1. Grant Camera Access
+                </button>
+                <button id="select-folder" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg transition-transform transform hover:scale-105" disabled>
+                    2. Select Photos Folder
+                </button>
+            </div>
+            <p id="error-message" class="text-red-500 mt-4 text-sm"></p>
+        </div>
+    </div>
+
+    <!-- Main Camera View -->
+    <div id="camera-view" class="camera-container hidden">
+        <div class="absolute inset-0 flex items-center justify-center p-4">
+             <div id="video-wrapper" class="video-wrapper ratio-4-3 bg-black rounded-lg overflow-hidden shadow-lg">
+                <video id="video-feed" autoplay playsinline></video>
+             </div>
+        </div>
+        
+        <!-- Top Controls -->
+        <div class="absolute top-0 left-0 right-0 p-4 flex justify-between items-center bg-gradient-to-b from-black/30 to-transparent">
+            <!-- Ratio Selector -->
+            <div class="relative">
+                <button id="ratio-btn" class="p-2 bg-black/30 rounded-full text-white hover:bg-black/50 transition">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 1v4m0 0h-4m4 0l-5-5"></path></svg>
+                </button>
+                <div id="ratio-menu" class="absolute left-0 mt-2 w-32 bg-white rounded-lg shadow-xl hidden z-10">
+                    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-ratio="1-1">1:1 (Square)</a>
+                    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-ratio="4-3">4:3 (Standard)</a>
+                    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-ratio="16-9">16:9 (Widescreen)</a>
+                    <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-ratio="full">Full Screen</a>
+                </div>
+            </div>
+            <!-- Flashlight -->
+            <button id="flash-btn" class="p-2 bg-black/30 rounded-full text-white hover:bg-black/50 transition">
+                <svg id="flash-off-icon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                <svg id="flash-on-icon" class="w-6 h-6 hidden" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 14.95a1 1 0 001.414 1.414l.707-.707a1 1 0 00-1.414-1.414l-.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1h4v1a2 2 0 11-4 0zM12 14c.018-.01.035-.02.053-.031a5.995 5.995 0 003.536-1.003l-1.06-1.06a4 4 0 01-5.658-5.656l-1.06-1.06A5.995 5.995 0 006 12c0 3.314 2.686 6 6 6z"></path></svg>
+            </button>
+        </div>
+
+        <!-- Bottom Controls -->
+        <div class="absolute bottom-0 left-0 right-0 p-6 flex justify-center items-center bg-gradient-to-t from-black/30 to-transparent">
+            <div class="w-full max-w-sm flex justify-between items-center">
+                <!-- Gallery Button -->
+                <button id="gallery-btn" class="p-3 bg-black/30 rounded-full text-white hover:bg-black/50 transition">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                </button>
+                <!-- Shutter Button -->
+                <button id="shutter-btn" class="w-20 h-20 bg-white rounded-full border-4 border-black/20 ring-4 ring-white/30 hover:scale-105 transition-transform"></button>
+                <!-- Switch Camera Button -->
+                <button id="switch-camera-btn" class="p-3 bg-black/30 rounded-full text-white hover:bg-black/50 transition">
+                     <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5M20 20v-5h-5M4 20h5v-5M20 4h-5v5"></path></svg>
+                </button>
+            </div>
+        </div>
+        
+        <canvas id="canvas" class="hidden"></canvas>
+    </div>
+
+    <!-- Gallery View -->
+    <div id="gallery-view" class="gallery-container hidden bg-gray-100">
+        <div class="w-full h-full flex flex-col">
+            <!-- Gallery Header -->
+            <div class="flex-shrink-0 p-4 bg-white/80 backdrop-blur-sm border-b border-gray-200 flex items-center justify-between sticky top-0 z-10">
+                <h2 class="text-xl font-bold">Photos</h2>
+                <button id="back-to-camera-btn" class="p-2 rounded-full hover:bg-gray-200 transition">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    <span class="sr-only">Back to Camera</span>
+                </button>
+            </div>
+            <!-- Image Grid -->
+            <div id="image-grid" class="flex-grow p-4 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                <!-- Images will be populated here -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Image Viewer Modal -->
+    <div id="image-viewer-modal" class="fixed inset-0 bg-black/80 flex items-center justify-center hidden z-50 p-4">
+        <div class="relative max-w-4xl max-h-[90vh] w-full h-full">
+            <img id="viewer-img" src="" class="w-full h-full object-contain" alt="Viewed Image">
+            <div class="absolute top-4 right-4 flex space-x-2">
+                 <a id="download-btn" href="#" download="photo.jpg" class="p-2 bg-black/50 text-white rounded-full hover:bg-black/70 transition" title="Download">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                 </a>
+                 <button id="delete-btn" class="p-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition" title="Delete">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                 </button>
+            </div>
+            <button id="close-viewer-btn" class="absolute top-4 left-4 p-2 bg-black/50 text-white rounded-full hover:bg-black/70 transition" title="Close">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Toast Notification -->
+    <div id="toast"></div>
+
+
+    <script>
+        // DOM Elements
+        const permissionOverlay = document.getElementById('permission-overlay');
+        const grantCameraBtn = document.getElementById('grant-camera');
+        const selectFolderBtn = document.getElementById('select-folder');
+        const errorMessage = document.getElementById('error-message');
+
+        const cameraView = document.getElementById('camera-view');
+        const video = document.getElementById('video-feed');
+        const canvas = document.getElementById('canvas');
+        const shutterBtn = document.getElementById('shutter-btn');
+        const videoWrapper = document.getElementById('video-wrapper');
+
+        const galleryView = document.getElementById('gallery-view');
+        const galleryBtn = document.getElementById('gallery-btn');
+        const backToCameraBtn = document.getElementById('back-to-camera-btn');
+        const imageGrid = document.getElementById('image-grid');
+
+        const imageViewerModal = document.getElementById('image-viewer-modal');
+        const viewerImg = document.getElementById('viewer-img');
+        const downloadBtn = document.getElementById('download-btn');
+        const deleteBtn = document.getElementById('delete-btn');
+        const closeViewerBtn = document.getElementById('close-viewer-btn');
+        
+        const ratioBtn = document.getElementById('ratio-btn');
+        const ratioMenu = document.getElementById('ratio-menu');
+        
+        const flashBtn = document.getElementById('flash-btn');
+        const flashOnIcon = document.getElementById('flash-on-icon');
+        const flashOffIcon = document.getElementById('flash-off-icon');
+
+        const switchCameraBtn = document.getElementById('switch-camera-btn');
+
+        // State
+        let directoryHandle = null;
+        let currentStream = null;
+        let flashOn = false;
+        let currentFacingMode = 'user'; // 'user' for front, 'environment' for back
+        let audioContext;
+
+        // --- Sound Effects ---
+        function initAudio() {
+            // Check if audioContext is already initialized to prevent errors on multiple clicks
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playShutterSound() {
+            if (!audioContext) return;
+            
+            const time = audioContext.currentTime;
+
+            // Mechanical click sound
+            const oscillator = audioContext.createOscillator();
+            oscillator.type = 'square';
+            oscillator.frequency.setValueAtTime(1200, time);
+
+            const gainNode = audioContext.createGain();
+            gainNode.gain.setValueAtTime(0.5, time);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.start(time);
+            oscillator.stop(time + 0.05);
+
+            // White noise for shutter mechanism
+            const bufferSize = audioContext.sampleRate * 0.1; // 0.1 second buffer
+            const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+
+            const noiseNode = audioContext.createBufferSource();
+            noiseNode.buffer = buffer;
+
+            const noiseGain = audioContext.createGain();
+            noiseGain.gain.setValueAtTime(0.2, time);
+            noiseGain.gain.exponentialRampToValueAtTime(0.01, time + 0.1);
+            
+            noiseNode.connect(noiseGain);
+            noiseGain.connect(audioContext.destination);
+
+            noiseNode.start(time);
+            noiseNode.stop(time + 0.1);
+        }
+
+        // --- Toast Notification ---
+        const toast = document.getElementById('toast');
+        function showToast(message, isError = false) {
+            toast.textContent = message;
+            toast.className = isError ? 'bg-red-500' : 'bg-gray-800';
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // --- Permissions ---
+        grantCameraBtn.addEventListener('click', async () => {
+            try {
+                await setupCamera(currentFacingMode);
+                grantCameraBtn.classList.replace('bg-blue-500', 'bg-gray-400');
+                grantCameraBtn.textContent = 'Camera Access Granted';
+                grantCameraBtn.disabled = true;
+                selectFolderBtn.disabled = false;
+                errorMessage.textContent = '';
+            } catch (err) {
+                console.error("Camera access denied:", err);
+                errorMessage.textContent = 'Camera access was denied. Please allow camera access in your browser settings.';
+            }
+        });
+
+        selectFolderBtn.addEventListener('click', async () => {
+            try {
+                if (!window.showDirectoryPicker) {
+                    throw new Error('File System Access API is not supported in this browser.');
+                }
+                directoryHandle = await window.showDirectoryPicker();
+                // Check if we have permission to write. If not, request it.
+                if (await directoryHandle.queryPermission({ mode: 'readwrite' }) !== 'granted') {
+                    if (await directoryHandle.requestPermission({ mode: 'readwrite' }) !== 'granted') {
+                        throw new Error('Permission to write to the folder was denied.');
+                    }
+                }
+                
+                permissionOverlay.classList.add('hidden');
+                cameraView.classList.remove('hidden');
+                initAudio(); // Initialize audio context after user interaction
+            } catch (err) {
+                console.error("Folder selection error:", err);
+                errorMessage.textContent = err.name === 'AbortError' ? 'Folder selection was canceled.' : `Error: ${err.message}`;
+            }
+        });
+        
+        // --- Camera Setup ---
+        async function setupCamera(facingMode) {
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+            }
+            const constraints = {
+                video: {
+                    facingMode: facingMode
+                },
+                audio: false
+            };
+            currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+            video.srcObject = currentStream;
+
+            // Apply or remove mirror effect based on camera
+            video.classList.toggle('rear-camera', facingMode === 'environment');
+
+            // Check for flashlight capability after stream is active
+            const [videoTrack] = currentStream.getVideoTracks();
+            const capabilities = videoTrack.getCapabilities();
+            flashBtn.style.display = capabilities.torch ? 'block' : 'none';
+        }
+
+        // --- Camera Controls ---
+        // Snap Photo
+        shutterBtn.addEventListener('click', () => {
+            // Only snap if video is playing and directory is selected
+            if (!directoryHandle || video.paused || video.ended) {
+                 showToast(directoryHandle ? 'Camera is not ready yet.' : 'Please select a photos folder first.', true);
+                 return;
+            }
+            
+            playShutterSound();
+            
+            // Visual effect
+            videoWrapper.classList.add('snap-effect');
+            setTimeout(() => videoWrapper.classList.remove('snap-effect'), 300);
+
+            // Capture image
+            captureImage();
+        });
+
+        async function captureImage() {
+            if (!directoryHandle) return;
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const context = canvas.getContext('2d');
+            
+            // Reset transformation matrix before drawing
+            context.setTransform(1, 0, 0, 1, 0, 0); 
+
+            // Only flip the image horizontally if it's the front camera
+            if (currentFacingMode === 'user') {
+                context.translate(canvas.width, 0);
+                context.scale(-1, 1);
+            }
+            
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Reset transformation after drawing to prevent future draw issues
+            context.setTransform(1, 0, 0, 1, 0, 0); 
+
+            canvas.toBlob(async (blob) => {
+                try {
+                    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                    const fileName = `photo-${timestamp}.jpg`;
+                    const newFileHandle = await directoryHandle.getFileHandle(fileName, { create: true });
+                    const writable = await newFileHandle.createWritable();
+                    await writable.write(blob);
+                    await writable.close();
+                    console.log(`Photo saved as ${fileName}`);
+                    showToast('Photo saved!');
+                } catch (err) {
+                    console.error('Error saving file:', err);
+                    showToast('Could not save the photo.', true);
+                }
+            }, 'image/jpeg', 0.9);
+        }
+
+        // Switch Camera
+        switchCameraBtn.addEventListener('click', async () => {
+            currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+            try {
+                await setupCamera(currentFacingMode);
+            } catch (err) {
+                console.error("Could not switch camera:", err);
+                showToast("Could not switch camera. Only one camera may be available.", true);
+                // Try to switch back if it failed
+                currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+                try {
+                    await setupCamera(currentFacingMode);
+                } catch(e) {
+                    console.log("Revert failed too.");
+                }
+            }
+        });
+
+
+        // Aspect Ratio
+        ratioBtn.addEventListener('click', () => ratioMenu.classList.toggle('hidden'));
+        document.addEventListener('click', (e) => {
+            if (!ratioBtn.contains(e.target) && !ratioMenu.contains(e.target)) {
+                ratioMenu.classList.add('hidden');
+            }
+        });
+        ratioMenu.addEventListener('click', (e) => {
+            if (e.target.tagName === 'A') {
+                const ratio = e.target.dataset.ratio;
+                // Remove all ratio-* classes before adding the new one
+                videoWrapper.className = videoWrapper.className.split(' ').filter(c => !c.startsWith('ratio-')).join(' ');
+                videoWrapper.classList.add(`ratio-${ratio}`);
+                ratioMenu.classList.add('hidden');
+            }
+        });
+
+        // Flashlight
+        flashBtn.addEventListener('click', () => {
+            if (!currentStream) return;
+            const [videoTrack] = currentStream.getVideoTracks();
+            if (videoTrack.getCapabilities().torch) {
+                flashOn = !flashOn;
+                videoTrack.applyConstraints({
+                    advanced: [{ torch: flashOn }]
+                });
+                flashOnIcon.classList.toggle('hidden', !flashOn);
+                flashOffIcon.classList.toggle('hidden', flashOn);
+            }
+        });
+
+        // --- Gallery (Recoded for robust opening) ---
+        galleryBtn.addEventListener('click', async () => {
+            // 1. Check if directoryHandle is available first
+            if (!directoryHandle) {
+                showToast("Please select a photos folder first.", true);
+                return; // Stop the function if no folder is selected
+            }
+            
+            // 2. Switch views immediately to provide instant visual feedback
+            cameraView.classList.add('hidden');
+            galleryView.classList.remove('hidden');
+
+            // 3. Clean up any previously created object URLs from the last time the gallery was open
+            imageGrid.querySelectorAll('img').forEach(img => {
+                if (img.src.startsWith('blob:')) {
+                    URL.revokeObjectURL(img.src);
+                }
+            });
+            
+            // 4. Load the gallery content asynchronously
+            await loadGallery();
+        });
+
+        backToCameraBtn.addEventListener('click', () => {
+            galleryView.classList.add('hidden');
+            cameraView.classList.remove('hidden');
+        });
+
+        async function loadGallery() {
+            // Show loading state first
+            imageGrid.innerHTML = `<p class="text-gray-500 col-span-full text-center p-8 animate-pulse">Loading photos from your folder...</p>`;
+            
+            try {
+                const imageEntries = [];
+                // Iterate over directory contents and collect image file handles
+                for await (const entry of directoryHandle.values()) {
+                    if (entry.kind === 'file' && /\.(jpe?g|png|gif|webp)$/i.test(entry.name)) {
+                        imageEntries.push(entry);
+                    }
+                }
+
+                // Clear the grid (removes loading message)
+                imageGrid.innerHTML = '';
+
+                if (imageEntries.length === 0) {
+                    imageGrid.innerHTML = `<p class="text-gray-500 col-span-full text-center p-8">No photos found in this folder.</p>`;
+                    return;
+                }
+                
+                // Sort by name descending (newest first based on timestamp filenames)
+                imageEntries.sort((a, b) => b.name.localeCompare(a.name));
+
+                for (const entry of imageEntries) {
+                    const file = await entry.getFile();
+                    const url = URL.createObjectURL(file); // Create temporary URL for display
+                    
+                    const imgWrapper = document.createElement('div');
+                    imgWrapper.className = 'aspect-square bg-gray-200 rounded-lg overflow-hidden cursor-pointer transform hover:scale-105 transition-transform shadow-md';
+                    
+                    const img = document.createElement('img');
+                    img.src = url;
+                    img.alt = entry.name;
+                    img.className = 'w-full h-full object-cover';
+                    img.dataset.filename = entry.name;
+                    
+                    imgWrapper.appendChild(img);
+                    imageGrid.appendChild(imgWrapper);
+                }
+            } catch (err) {
+                console.error('Error loading gallery:', err);
+                imageGrid.innerHTML = `<p class="text-red-500 col-span-full text-center p-8">Error loading photos. Please try selecting the folder again or check permissions.</p>`;
+                showToast('Could not load photos.', true);
+            }
+        }
+        
+        // --- Image Viewer ---
+        imageGrid.addEventListener('click', (e) => {
+            if (e.target.tagName === 'IMG') {
+                viewerImg.src = e.target.src;
+                viewerImg.dataset.filename = e.target.dataset.filename;
+                downloadBtn.download = e.target.dataset.filename;
+                downloadBtn.href = e.target.src;
+                imageViewerModal.classList.remove('hidden');
+            }
+        });
+        
+        closeViewerBtn.addEventListener('click', () => {
+            imageViewerModal.classList.add('hidden');
+            // Revoke the object URL to free up memory
+            if (viewerImg.src.startsWith('blob:')) {
+                 URL.revokeObjectURL(viewerImg.src); 
+            }
+            viewerImg.src = "";
+            viewerImg.dataset.filename = "";
+        });
+
+        deleteBtn.addEventListener('click', async () => {
+            const filename = viewerImg.dataset.filename;
+            if (filename && directoryHandle) {
+                // In a production app, a custom modal confirmation would replace this direct action.
+                try {
+                    // Request readwrite permission again if it was somehow lost (though unlikely)
+                    const permission = await directoryHandle.queryPermission({ mode: 'readwrite' });
+                    if (permission !== 'granted') {
+                         await directoryHandle.requestPermission({ mode: 'readwrite' });
+                    }
+
+                    await directoryHandle.removeEntry(filename);
+                    console.log(`${filename} deleted.`);
+                    
+                    closeViewerBtn.click();
+                    await loadGallery(); // Reload gallery immediately
+                    showToast(`${filename} deleted.`);
+                } catch (err) {
+                    console.error('Error deleting file:', err);
+                    showToast(`Could not delete ${filename}.`, true);
+                }
+            }
+        });
+    </script>
+
+</body>
+</html>
