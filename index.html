@@ -157,81 +157,34 @@
         #systemTray { font-size: 14px; font-weight: 500; }
 
         /* --- 4. App Menu --- */
-        /* --- 4. App Menu --- */
-#appMenu {
-    position: fixed;
-    bottom: 60px;
-    left: 15px;
-    width: 400px;
-    max-height: 500px;
-    background: var(--bar-background);
-    backdrop-filter: blur(var(--bar-blur));
-    border-radius: 12px;
-    border: 1px solid var(--border-color);
-    box-shadow: 0 8px 30px var(--shadow-color);
-    padding: 15px;
-    z-index: 9999;
-    display: flex;
-    flex-direction: column;
-    opacity: 0;
-    transform: translateY(20px);
-    visibility: hidden;
-    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
-}
-#appMenu.visible { 
-    opacity: 1; 
-    transform: translateY(0); 
-    visibility: visible; 
-}
-
-#appSearch { 
-    width: 100%; 
-    padding: 12px; 
-    border-radius: 8px; 
-    border: 1px solid var(--border-color); 
-    background-color: rgba(255, 255, 255, 0.8); 
-    font-size: 16px; 
-    margin-bottom: 15px; 
-}
-#appSearch:focus { 
-    outline: none; 
-    border-color: #007aff; 
-    box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.3); 
-}
-
-#appGrid { 
-    display: grid; 
-    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); 
-    gap: 15px; 
-    overflow-y: auto;        /* allow scroll */
-    max-height: 400px;       /* prevent growing too tall */
-    flex: 1;                 /* fill available space */
-    padding-right: 5px; 
-}
-
-.app-icon { 
-    display: flex; 
-    flex-direction: column; 
-    align-items: center; 
-    text-align: center; 
-    padding: 10px; 
-    border-radius: 8px; 
-    cursor: grab; 
-    transition: background-color 0.2s ease; 
-    text-decoration: none; 
-    color: var(--text-color); 
-}
-.app-icon:hover { background-color: var(--hover-background); }
-.app-icon i { font-size: 32px; margin-bottom: 8px; }
-.app-icon span { 
-    font-size: 13px; 
-    font-weight: 500; 
-    white-space: nowrap; 
-    overflow: hidden; 
-    text-overflow: ellipsis; 
-    width: 100%; 
-}
-
+        #appMenu {
+            position: fixed;
+            bottom: 60px;
+            left: 15px;
+            width: 400px;
+            max-height: 350px;
+            background: var(--bar-background);
+            backdrop-filter: blur(var(--bar-blur));
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 8px 30px var(--shadow-color);
+            padding: 15px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            transform: translateY(20px);
+            visibility: hidden;
+            transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+        }
+        #appMenu.visible { opacity: 1; transform: translateY(0); visibility: visible; }
+        #appSearch { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background-color: rgba(255, 255, 255, 0.8); font-size: 16px; margin-bottom: 15px; }
+        #appSearch:focus { outline: none; border-color: #007aff; box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.3); }
+        #appGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 15px; overflow-y: auto; padding-right: 5px; }
+        .app-icon { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 10px; border-radius: 8px; cursor: grab; transition: background-color 0.2s ease; text-decoration: none; color: var(--text-color); }
+        .app-icon:hover { background-color: var(--hover-background); }
+        .app-icon i { font-size: 32px; margin-bottom: 8px; }
+        .app-icon span { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
 
         /* --- 5. App Windows --- */
         #window-container {
