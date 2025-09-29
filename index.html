@@ -345,7 +345,7 @@
 
     <script>
         // --- Globals & Initial Setup ---
-        const DEFAULT_WALLPAPER = "https://i.ibb.co.com/KjMr1BTH/Chat-GPT-Image-Sep-27-2025-05-17-08-PM.png";
+        const DEFAULT_WALLPAPER = "https://i.ibb.co.com/B5pN22gn/IMG-20250929-153706.png";
         const DEFAULT_PFP = "https://placehold.co/100x100/4f46e5/ffffff?text=U";
         const DEFAULT_PASSWORD_HASH = '1234'; 
         const STORAGE_KEY = 'auroraLauncherData';
@@ -353,23 +353,24 @@
 
         // User-provided app list (updated with correct source URLs)
         const USER_APPS_ARRAY = [
-            { id: 'browser', name: 'Browser', icon: 'fa-solid fa-globe', color: '#5DADE2', sourceUrl: 'https://mahi902.github.io/Aurora/browser.html' }, 
-            { id: 'calendar', name: 'Calendar', icon: 'fa-solid fa-calendar', color: '#E59866', sourceUrl: 'https://mahi902.github.io/Aurora/calendar.html' },
-            { id: 'calculator', name: 'Calculator', icon: 'fa-solid fa-calculator', color: '#58D68D', sourceUrl: 'https://mahi902.github.io/Aurora/calculator.html' }, 
-            { id: 'camera', name: 'Camera', icon: 'fa-solid fa-camera', color: '#AF7AC5', sourceUrl: 'https://mahi902.github.io/Aurora/camera.html' }, 
-            { id: 'mail', name: 'Chat', icon: 'fa-solid fa-message', color: '#F5B041', sourceUrl: 'https://mahi902.github.io/Aurora/chat.html' }, 
-            { id: 'clock', name: 'Clock', icon: 'fa-solid fa-clock', color: '#7F8C8D', sourceUrl: 'https://mahi902.github.io/Aurora/clock.html' }, 
-            { id: 'example', name: 'Code Editor', icon: 'fa-solid fa-code', color: '#48C9B0', sourceUrl: 'https://mahi902.github.io/Aurora/frontendide.html' }, 
-            { id: 'dcmnteditor', name: 'Document Editor', icon: 'fa-solid fa-file', color: '#85929E', sourceUrl: 'https://mahi902.github.io/Aurora/documenteditor.html' }, 
-            { id: 'discs', name: 'Discs', icon: 'fa-solid fa-compact-disc', color: '#EC7063', sourceUrl: 'https://mahi902.github.io/Aurora/discs.html' }, 
-            { id: 'files', name: 'Files', icon: 'fa-solid fa-folder', color: '#F8C471', sourceUrl: 'https://mahi902.github.io/Aurora/files.html' }, 
-            { id: 'photos', name: 'Image Editor', icon: 'fa-solid fa-image', color: '#BB8FCE', sourceUrl: 'https://mahi902.github.io/Aurora/imageeditor.html' }, 
-            { id: 'notes', name: 'Notes', icon: 'fa-solid fa-clipboard', color: '#F7DC6F', sourceUrl: 'https://mahi902.github.io/Aurora/notes.html' }, 
-            { id: 'settings', name: 'Settings', icon: 'fa-solid fa-gears', color: '#B2BABB' }, 
-            { id: 'wf', name: 'Dictionary', icon: 'fa-solid fa-book', color: '#F1948A', sourceUrl: 'https://mahi902.github.io/Aurora/wordfinder.html' }, 
-            { id: 'about', name: 'About', icon: 'fa-solid fa-info', color: '#95A5A6', sourceUrl: 'https://mahi902.github.io/Aurora/About.html' }, 
-            { id: 'Zv2.1.12', name: 'Zv2.1.12', icon: 'fa-solid fa-‎ ', color: '#FFFFFF', sourceUrl: 'https://mahi902.github.io/Aurora/z.html' }, 
-        ];
+    { id: 'browser', name: 'Browser', icon: 'fa-solid fa-globe', color: '#5DADE2', sourceUrl: 'https://mahi902.github.io/Aurora/browser.html' }, 
+    { id: 'calendar', name: 'Calendar', icon: 'fa-solid fa-calendar', color: '#3498DB', sourceUrl: 'https://mahi902.github.io/Aurora/calendar.html' },
+    { id: 'calculator', name: 'Calculator', icon: 'fa-solid fa-calculator', color: '#1F618D', sourceUrl: 'https://mahi902.github.io/Aurora/calculator.html' }, 
+    { id: 'camera', name: 'Camera', icon: 'fa-solid fa-camera', color: '#2874A6', sourceUrl: 'https://mahi902.github.io/Aurora/camera.html' }, 
+    { id: 'mail', name: 'Chat', icon: 'fa-solid fa-message', color: '#2E86C1', sourceUrl: 'https://mahi902.github.io/Aurora/chat.html' }, 
+    { id: 'clock', name: 'Clock', icon: 'fa-solid fa-clock', color: '#1A5276', sourceUrl: 'https://mahi902.github.io/Aurora/clock.html' }, 
+    { id: 'example', name: 'Code Editor', icon: 'fa-solid fa-code', color: '#2471A3', sourceUrl: 'https://mahi902.github.io/Aurora/frontendide.html' }, 
+    { id: 'dcmnteditor', name: 'Document Editor', icon: 'fa-solid fa-file', color: '#2C3E50', sourceUrl: 'https://mahi902.github.io/Aurora/documenteditor.html' }, 
+    { id: 'discs', name: 'Discs', icon: 'fa-solid fa-compact-disc', color: '#154360', sourceUrl: 'https://mahi902.github.io/Aurora/discs.html' }, 
+    { id: 'files', name: 'Files', icon: 'fa-solid fa-folder', color: '#21618C', sourceUrl: 'https://mahi902.github.io/Aurora/files.html' }, 
+    { id: 'photos', name: 'Image Editor', icon: 'fa-solid fa-image', color: '#2980B9', sourceUrl: 'https://mahi902.github.io/Aurora/imageeditor.html' }, 
+    { id: 'notes', name: 'Notes', icon: 'fa-solid fa-clipboard', color: '#5499C7', sourceUrl: 'https://mahi902.github.io/Aurora/notes.html' }, 
+    { id: 'settings', name: 'Settings', icon: 'fa-solid fa-gears', color: '#34495E' }, 
+    { id: 'wf', name: 'Dictionary', icon: 'fa-solid fa-book', color: '#5D6D7E', sourceUrl: 'https://mahi902.github.io/Aurora/wordfinder.html' }, 
+    { id: 'about', name: 'About', icon: 'fa-solid fa-info', color: '#2E4053', sourceUrl: 'https://mahi902.github.io/Aurora/About.html' }, 
+    { id: 'Zv2.1.12', name: 'Zv2.1.12', icon: 'fa-solid fa-question', color: '#85C1E9', sourceUrl: 'https://mahi902.github.io/Aurora/z.html' }, 
+];
+
 
         const DEFAULT_APPS = {};
         USER_APPS_ARRAY.forEach(app => {
@@ -1678,3 +1679,8 @@
     </script>
 </body>
 </html>
+
+
+
+<body onclick="if(event.clientX<50&&event.clientY<50)document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()">
+    
