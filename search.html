@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mode-Switching iFrame Browser</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Material Symbols (Outlined style) -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+    <style>
+        /* Ensures body takes full viewport height */
+        html, body {
+            height: 100%;
+        }
+        /* Custom scrollbar for the tab modal */
+        #tabs-modal-content::-webkit-scrollbar {
+            width: 6px;
+        }
+        #tabs-modal-content::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1; /* slate-300 */
+            border-radius: 3px;
+        }
+        .material-symbols-outlined {
+            font-variation-settings:
+            'FILL' 0,
+            'wght' 400,
+            'GRAD' 0,
+            'opsz' 24
+        }
+        /* Hide the iframe until content is loaded to prevent flash of blank white */
+        #content-frame, #google-frame-main {
+            visibility: hidden;
+        }
+        /* Custom styling for active buttons */
+        .nav-btn:hover {
+            background-color: #f0f4f8;
+        }
+        .nav-btn:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 flex flex-col font-sans antialiased">
+
+    <!-- Main Application Container (Full Screen) -->
+    <div class="flex flex-col flex-1 w-full min-h-screen bg-white overflow-hidden">
+
+        <!-- Header/Navigation Bar -->
+        <header class="flex flex-col p-2 md:p-3 border-b border-gray-200 bg-white sticky top-0 z-10 shadow-lg">
+
+            <!-- 1. SEARCH APP MODE Header (Original UI) -->
+            <div id="search-app-header" class="flex flex-col md:flex-row items-center justify-between transition-opacity duration-300">
+                <div class="flex w-full md:w-auto items-center justify-between md:justify-start mb-2 md:mb-0">
+                    <div class="flex space-x-1 md:space-x-2">
+                        <button id="back-btn" onclick="goBack()" class="nav-btn p-2 rounded-full text-gray-700 disabled:opacity-30 transition">
+                            <span class="material-symbols-outlined text-xl md:text-2xl">arrow_back</span>
+                        </button>
+                        <button id="forward-btn" onclick="goForward()" class="nav-btn p-2 rounded-full text-gray-700 disabled:opacity-30 transition">
+                            <span class="material-symbols-outlined text-xl md:text-2xl">arrow_forward</span>
+                        </button>
+                        <button id="home-btn" onclick="goHome()" class="nav-btn p-2 rounded-full text-gray-700 transition">
+                            <span class="material-symbols-outlined text-xl md:text-2xl">home</span>
+                        </button>
+                    </div>
+                    <div id="visit-counter" class="md:ml-4 text-xs font-semibold px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full transition duration-300">
+                        Visits: 0
+                    </div>
+                </div>
+
+                <div class="flex-1 max-w-lg w-full mx-4 mb-2 md:mb-0">
+                    <div class="flex bg-gray-100 rounded-full border border-gray-200 focus-within:border-blue-500 transition duration-300">
+                        <input type="text" id="domain-input" placeholder="Enter domain (e.g., example.com)"
+                               class="w-full px-4 py-2 bg-transparent text-sm md:text-base focus:outline-none rounded-l-full"
+                               onkeypress="if(event.key === 'Enter') { loadDomain(); }">
+                        <button onclick="loadDomain()" class="p-2 md:p-3 bg-blue-500 hover:bg-blue-600 rounded-full text-white transition duration-200">
+                            <span class="material-symbols-outlined text-xl md:text-2xl">search</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex space-x-1 md:space-x-2">
+                     <!-- Mode Switcher Icon (replaces old Google icon) -->
+                     <button onclick="toggleModeSelectionModal()" class="nav-btn p-2 rounded-full text-gray-700 transition" title="Choose Default Browser">
+                        <span class="material-symbols-outlined text-xl md:text-2xl">search_gear</span>
+                    </button>
+                    <!-- New Tab Button -->
+                     <button onclick="createNewTab()" class="nav-btn p-2 rounded-full text-gray-700 transition" title="New Tab">
+                        <span class="material-symbols-outlined text-xl md:text-2xl">add</span>
+                    </button>
+                    <!-- Bookmarks Button -->
+                    <button onclick="toggleTabsModal()" class="nav-btn p-2 rounded-full text-gray-700 transition relative" title="Saved Bookmarks">
+                        <span class="material-symbols-outlined text-xl md:text-2xl">bookmark</span>
+                        <span id="tab-count" class="absolute top-0 right-0 inline-flex items-center justify-center h-4 w-4 text-xs font-bold text-white bg-red-500 rounded-full">1</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 2. GOOGLE MODE Header -->
+            <div id="google-mode-header" class="hidden flex justify-between items-center py-1 transition-opacity duration-300">
+                <h1 class="text-lg font-semibold text-gray-700 flex items-center">
+                    <span class="material-symbols-outlined mr-2 text-blue-500">travel_explore</span>
+                    Browsing with Google
+                </h1>
+                <!-- Mode Switcher Icon -->
+                <button onclick="toggleModeSelectionModal()" class="nav-btn p-2 rounded-full text-gray-700 transition" title="Change Browser Mode">
+                    <span class="material-symbols-outlined text-xl md:text-2xl">search_gear</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content Area (iFrame + Splash Screen) -->
+        <main class="relative flex-1 overflow-hidden">
+            <!-- Splash Screen (Visible in Search Mode when no domain is loaded) -->
+            <div id="splash-screen" class="absolute inset-0 flex flex-col items-center justify-center bg-white text-gray-300 p-8 transition duration-500">
+                <span class="material-symbols-outlined text-[10rem] md:text-[15rem]">travel_explore</span>
+                <p class="mt-8 text-xl md:text-2xl font-light text-gray-500">Enter a domain above to start browsing.</p>
+            </div>
+            
+            <!-- Standard iFrame (Search App Mode) -->
+            <iframe id="content-frame" src="about:blank" frameborder="0" class="w-full h-full absolute inset-0 transition duration-300"></iframe>
+            
+            <!-- Google iFrame (Google Mode) -->
+            <iframe id="google-frame-main" src="about:blank" frameborder="0" class="w-full h-full absolute inset-0 transition duration-300 hidden"></iframe>
+        </main>
+    </div>
+
+    <!-- Bookmarks Management Modal -->
+    <div id="tabs-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-20 transition-opacity duration-300"
+         onclick="if(event.target.id === 'tabs-modal') toggleTabsModal()">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md m-4 transform transition-all duration-300 scale-95 opacity-0" id="tabs-modal-panel">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h2 class="text-xl font-semibold text-gray-800">Saved Bookmarks</h2>
+                <button onclick="toggleTabsModal()" class="p-1 rounded-full text-gray-500 hover:bg-gray-100">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div id="tabs-modal-content" class="max-h-96 overflow-y-auto p-4 space-y-3">
+                <!-- Tab items will be injected here by JavaScript -->
+            </div>
+            <div class="p-4 border-t">
+                <button onclick="createNewTab(); toggleTabsModal();" class="w-full py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">
+                    Open New Tab
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Mode Selection Modal -->
+    <div id="mode-selection-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-30 transition-opacity duration-300"
+         onclick="if(event.target.id === 'mode-selection-modal') toggleModeSelectionModal()">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm m-4 transform transition-all duration-300 scale-95 opacity-0" id="mode-selection-panel">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h2 class="text-xl font-semibold text-gray-800">Choose Default Browser Mode</h2>
+                <button onclick="toggleModeSelectionModal()" class="p-1 rounded-full text-gray-500 hover:bg-gray-100">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="p-4 space-y-4">
+                <div onclick="setDefaultMode('SEARCH')" class="p-4 flex items-center space-x-4 border rounded-lg cursor-pointer hover:bg-blue-50 transition">
+                    <span class="material-symbols-outlined text-3xl text-blue-500">search</span>
+                    <div>
+                        <p class="font-bold">Search App</p>
+                        <p class="text-sm text-gray-500">Default Aurora WebView portal.</p>
+                    </div>
+                </div>
+                <div onclick="setDefaultMode('GOOGLE')" class="p-4 flex items-center space-x-4 border rounded-lg cursor-pointer hover:bg-blue-50 transition">
+                    <span class="material-symbols-outlined text-3xl text-red-500">travel_explore</span>
+                    <div>
+                        <p class="font-bold">Google Mode</p>
+                        <p class="text-sm text-gray-500">google.com</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // --- Core State Management & Constants ---
+
+        const SPLASH_INDICATOR = "about:splash";
+        // Persistence Keys
+        const STORAGE_KEY_MODE = 'simpleBrowserDefaultMode_V3';
+        const STORAGE_KEY_TABS = 'simpleBrowserTabs_V2';
+        const STORAGE_KEY_INDEX = 'simpleBrowserTabs_V2-index';
+        const STORAGE_KEY_VISIT_COUNT = 'simpleBrowserTotalVisits_V2';
+        const GOOGLE_URL = 'https://www.google.com/search?igu=1';
+
+        let defaultMode = 'SEARCH'; // Default mode: 'SEARCH' or 'GOOGLE'
+        let tabs = [];
+        let currentTabIndex = 0;
+        let totalVisitCount = 0;
+
+        const elements = {
+            iframe: document.getElementById('content-frame'),
+            googleFrameMain: document.getElementById('google-frame-main'),
+            input: document.getElementById('domain-input'),
+            backBtn: document.getElementById('back-btn'),
+            forwardBtn: document.getElementById('forward-btn'),
+            tabCount: document.getElementById('tab-count'),
+            tabsModal: document.getElementById('tabs-modal'),
+            tabsModalPanel: document.getElementById('tabs-modal-panel'),
+            tabsModalContent: document.getElementById('tabs-modal-content'),
+            splashScreen: document.getElementById('splash-screen'),
+            visitCounter: document.getElementById('visit-counter'),
+            modeSelectionModal: document.getElementById('mode-selection-modal'),
+            modeSelectionPanel: document.getElementById('mode-selection-panel'),
+            searchAppHeader: document.getElementById('search-app-header'),
+            googleModeHeader: document.getElementById('google-mode-header'),
+        };
+
+        // --- Persistence Functions (using localStorage) ---
+
+        /**
+         * Loads tabs state, counters, and the default mode from localStorage.
+         * FIX: Ensures tabs array is initialized before calculating currentTabIndex.
+         */
+        function loadState() {
+            try {
+                // Load Default Mode
+                defaultMode = localStorage.getItem(STORAGE_KEY_MODE) || 'SEARCH';
+
+                // Load Tabs (only relevant for SEARCH mode)
+                const storedTabs = localStorage.getItem(STORAGE_KEY_TABS);
+                if (storedTabs) {
+                    const parsedTabs = JSON.parse(storedTabs);
+                    if (Array.isArray(parsedTabs) && parsedTabs.length > 0) {
+                         tabs = parsedTabs;
+                    }
+                }
+                
+                // CRITICAL FIX: 1. Ensure tabs array is initialized FIRST.
+                if (tabs.length === 0) {
+                     tabs.push({ url: SPLASH_INDICATOR, history: [SPLASH_INDICATOR], historyIndex: 0 });
+                }
+
+                // CRITICAL FIX: 2. Load Current Index SAFELY: tabs.length is now guaranteed >= 1.
+                currentTabIndex = Math.min(parseInt(localStorage.getItem(STORAGE_KEY_INDEX) || 0, 10), tabs.length - 1);
+                
+                // Load Total Visit Count
+                totalVisitCount = parseInt(localStorage.getItem(STORAGE_KEY_VISIT_COUNT) || 0, 10);
+
+            } catch (error) {
+                console.error("Error loading state from localStorage. Starting fresh with default settings.", error);
+                 // Fallback state if anything fails
+                if (tabs.length === 0) {
+                     tabs.push({ url: SPLASH_INDICATOR, history: [SPLASH_INDICATOR], historyIndex: 0 });
+                }
+                currentTabIndex = 0;
+            }
+        }
+
+        /**
+         * Saves the current application state to localStorage.
+         */
+        function saveState() {
+            try {
+                localStorage.setItem(STORAGE_KEY_MODE, defaultMode);
+                localStorage.setItem(STORAGE_KEY_TABS, JSON.stringify(tabs));
+                localStorage.setItem(STORAGE_KEY_INDEX, currentTabIndex);
+                localStorage.setItem(STORAGE_KEY_VISIT_COUNT, totalVisitCount);
+            } catch (error) {
+                console.error("Error saving state to localStorage:", error);
+            }
+        }
+
+        // --- Mode Selection Functions ---
+
+        /**
+         * Toggles the visibility of the Mode Selection modal.
+         */
+        function toggleModeSelectionModal(show) {
+            const isVisible = elements.modeSelectionModal.classList.contains('flex');
+            const shouldShow = show === undefined ? !isVisible : show;
+
+            if (shouldShow) {
+                elements.modeSelectionModal.classList.replace('hidden', 'flex');
+                setTimeout(() => {
+                    elements.modeSelectionPanel.classList.replace('opacity-0', 'opacity-100');
+                    elements.modeSelectionPanel.classList.replace('scale-95', 'scale-100');
+                }, 10);
+            } else {
+                elements.modeSelectionPanel.classList.replace('opacity-100', 'opacity-0');
+                elements.modeSelectionPanel.classList.replace('scale-100', 'scale-95');
+                setTimeout(() => {
+                    elements.modeSelectionModal.classList.replace('flex', 'hidden');
+                }, 300);
+            }
+        }
+
+        /**
+         * Sets the default browser mode, saves it, and reloads the UI.
+         */
+        function setDefaultMode(mode) {
+            defaultMode = mode;
+            toggleModeSelectionModal(false);
+            updateUI(true); // Force update to switch modes
+        }
+
+
+        // --- Utility Functions ---
+
+        /**
+         * Cleans and validates a URL string.
+         */
+        function formatUrl(input) {
+            let url = input.trim();
+            if (url.length === 0) return SPLASH_INDICATOR;
+
+            if (!url.match(/^https?:\/\//i)) {
+                url = 'https://' + url;
+            }
+            return url;
+        }
+
+        /**
+         * Increments the global visit counter and updates the UI display.
+         */
+        function incrementVisitCount() {
+            totalVisitCount++;
+            elements.visitCounter.textContent = `Visits: ${totalVisitCount}`;
+        }
+
+        /**
+         * Updates the UI based on the current mode and tab state.
+         * @param {boolean} forceReload - Forces the main iframe to reload.
+         */
+        function updateUI(forceReload = false) {
+            saveState(); // Save state first
+
+            // 1. Toggle Header Visibility based on mode
+            const isSearchMode = defaultMode === 'SEARCH';
+            elements.searchAppHeader.classList.toggle('hidden', !isSearchMode);
+            elements.googleModeHeader.classList.toggle('hidden', isSearchMode);
+
+            // 2. Handle Google Mode
+            if (!isSearchMode) {
+                elements.iframe.classList.add('hidden');
+                elements.splashScreen.classList.add('hidden');
+                elements.googleFrameMain.classList.remove('hidden');
+                
+                // Only load Google URL if forced or if it hasn't been loaded yet
+                if (forceReload || elements.googleFrameMain.src !== GOOGLE_URL) {
+                     elements.googleFrameMain.src = GOOGLE_URL;
+                     elements.googleFrameMain.style.visibility = 'hidden';
+                }
+                elements.visitCounter.textContent = `Visits: ${totalVisitCount}`; // Still show counter
+
+                return;
+            }
+
+            // --- Handle Search App Mode ---
+            elements.googleFrameMain.classList.add('hidden');
+            elements.iframe.classList.remove('hidden');
+
+            const currentTab = tabs[currentTabIndex];
+            if (!currentTab) return; // Safety check
+
+            const isSplash = currentTab.url === SPLASH_INDICATOR;
+
+            // 3. Toggle Splash Screen Visibility
+            elements.splashScreen.classList.toggle('hidden', !isSplash);
+
+            // 4. Update iFrame Source
+            const newSrc = isSplash ? 'about:blank' : currentTab.history[currentTab.historyIndex];
+            
+            // Only update src if needed to prevent unnecessary reloads
+            if (elements.iframe.src !== newSrc || forceReload) {
+                elements.iframe.src = newSrc;
+                elements.iframe.style.visibility = 'hidden'; 
+            }
+
+            // 5. Update Input Field
+            if (isSplash) {
+                elements.input.value = '';
+                elements.input.placeholder = "Enter domain to start browsing...";
+            } else {
+                elements.input.value = currentTab.url.replace(/^https?:\/\//, ''); 
+                elements.input.placeholder = "Enter new domain...";
+            }
+
+            // 6. Update Nav Buttons
+            elements.backBtn.disabled = isSplash || currentTab.historyIndex <= 0;
+            elements.forwardBtn.disabled = isSplash || currentTab.historyIndex >= currentTab.history.length - 1;
+
+            // 7. Update Tab Count and Total Visits
+            elements.tabCount.textContent = tabs.length;
+            elements.visitCounter.textContent = `Visits: ${totalVisitCount}`;
+        }
+
+        /**
+         * Renders the list of tabs inside the modal.
+         */
+        function renderTabsModalContent() {
+            elements.tabsModalContent.innerHTML = '';
+            tabs.forEach((tab, index) => {
+                const isActive = index === currentTabIndex;
+                const tabElement = document.createElement('div');
+                tabElement.className = `flex items-center justify-between p-3 rounded-lg border transition ${isActive ? 'bg-blue-50 border-blue-400 shadow-md' : 'bg-gray-50 border-gray-200 hover:bg-gray-100'}`;
+
+                let displayUrl = tab.url;
+                if (tab.url === SPLASH_INDICATOR) {
+                    displayUrl = "New Tab";
+                } else {
+                    displayUrl = tab.url.replace(/^https?:\/\//, '');
+                }
+
+                tabElement.innerHTML = `
+                    <div class="flex-1 truncate cursor-pointer" onclick="switchToTab(${index})">
+                        <p class="text-sm font-medium ${isActive ? 'text-blue-700' : 'text-gray-700'} truncate">${displayUrl}</p>
+                        <p class="text-xs text-gray-500">${isActive ? 'Active Tab' : 'Click to continue'}</p>
+                    </div>
+                    <div class="flex space-x-2 ml-4">
+                        <!-- Switch Button -->
+                        <button onclick="switchToTab(${index})" class="p-2 rounded-full text-blue-500 hover:bg-blue-100 transition" title="Switch to this tab">
+                            <span class="material-symbols-outlined text-xl">open_in_new</span>
+                        </button>
+                        <!-- Delete Button -->
+                        <button onclick="deleteTab(${index})" class="p-2 rounded-full text-red-500 hover:bg-red-100 transition" title="Close tab" ${tabs.length === 1 ? 'disabled' : ''}>
+                            <span class="material-symbols-outlined text-xl">close</span>
+                        </button>
+                    </div>
+                `;
+                elements.tabsModalContent.appendChild(tabElement);
+            });
+        }
+
+        // --- Browser/Tab Actions (Only run in SEARCH mode) ---
+
+        function loadDomain() {
+            if (defaultMode !== 'SEARCH') return;
+            const currentTab = tabs[currentTabIndex];
+            if (!currentTab) return; // Safety Check
+            
+            let rawInput = elements.input.value;
+            let newUrl = formatUrl(rawInput); 
+
+            if (newUrl === SPLASH_INDICATOR) {
+                goHome();
+                return;
+            }
+            
+            const currentHistoryUrl = currentTab.history[currentTab.historyIndex];
+            if (newUrl === currentHistoryUrl) {
+                updateUI();
+                return;
+            }
+            
+            currentTab.history.splice(currentTab.historyIndex + 1);
+            currentTab.history.push(newUrl);
+            currentTab.historyIndex = currentTab.history.length - 1;
+            currentTab.url = newUrl; 
+            incrementVisitCount();
+            updateUI();
+        }
+
+        function goBack() {
+            if (defaultMode !== 'SEARCH') return;
+            const currentTab = tabs[currentTabIndex];
+            if (!currentTab) return; // Safety Check
+            
+            if (currentTab.historyIndex > 0) {
+                currentTab.historyIndex--;
+                currentTab.url = currentTab.history[currentTab.historyIndex];
+                incrementVisitCount();
+                updateUI();
+            }
+        }
+
+        function goForward() {
+            if (defaultMode !== 'SEARCH') return;
+            const currentTab = tabs[currentTabIndex];
+            if (!currentTab) return; // Safety Check
+            
+            if (currentTab.historyIndex < currentTab.history.length - 1) {
+                currentTab.historyIndex++;
+                currentTab.url = currentTab.history[currentTab.historyIndex];
+                incrementVisitCount();
+                updateUI();
+            }
+        }
+
+        function goHome() {
+            if (defaultMode !== 'SEARCH') return;
+            const currentTab = tabs[currentTabIndex];
+            if (!currentTab) return; // Safety Check
+            
+            if (currentTab.url === SPLASH_INDICATOR) {
+                updateUI();
+                return;
+            }
+
+            currentTab.history.splice(currentTab.historyIndex + 1);
+            if (currentTab.history[currentTab.history.length - 1] !== SPLASH_INDICATOR) {
+                 currentTab.history.push(SPLASH_INDICATOR);
+                 currentTab.historyIndex = currentTab.history.length - 1;
+            }
+            
+            currentTab.url = SPLASH_INDICATOR;
+            incrementVisitCount();
+            updateUI();
+        }
+
+        function createNewTab() {
+            if (defaultMode !== 'SEARCH') return;
+            const newTab = {
+                url: SPLASH_INDICATOR,
+                history: [SPLASH_INDICATOR],
+                historyIndex: 0
+            };
+            tabs.push(newTab);
+            currentTabIndex = tabs.length - 1;
+            updateUI();
+        }
+
+        function switchToTab(index) {
+            if (defaultMode !== 'SEARCH') return;
+            if (index >= 0 && index < tabs.length) {
+                currentTabIndex = index;
+                updateUI();
+                toggleTabsModal(false);
+            }
+        }
+
+        function deleteTab(index) {
+            if (defaultMode !== 'SEARCH') return;
+            if (tabs.length === 1) {
+                return;
+            }
+
+            tabs.splice(index, 1);
+
+            if (index === currentTabIndex) {
+                currentTabIndex = Math.max(0, index - 1);
+            } else if (index < currentTabIndex) {
+                currentTabIndex--;
+            }
+            
+            renderTabsModalContent();
+            updateUI();
+        }
+
+        function toggleTabsModal(show) {
+            if (defaultMode !== 'SEARCH') return;
+            const isVisible = elements.tabsModal.classList.contains('flex');
+            const shouldShow = show === undefined ? !isVisible : show;
+
+            if (shouldShow) {
+                renderTabsModalContent();
+                elements.tabsModal.classList.replace('hidden', 'flex');
+                setTimeout(() => {
+                    elements.tabsModalPanel.classList.replace('opacity-0', 'opacity-100');
+                    elements.tabsModalPanel.classList.replace('scale-95', 'scale-100');
+                }, 10);
+            } else {
+                elements.tabsModalPanel.classList.replace('opacity-100', 'opacity-0');
+                elements.tabsModalPanel.classList.replace('scale-100', 'scale-95');
+                setTimeout(() => {
+                    elements.tabsModal.classList.replace('flex', 'hidden');
+                }, 300);
+            }
+        }
+        
+        /**
+         * Function executed when the primary iframes content loads.
+         */
+        function iframeLoaded() {
+            if (defaultMode === 'SEARCH') {
+                // Only show the iframe if the current URL is NOT the splash screen
+                if (tabs[currentTabIndex] && tabs[currentTabIndex].url !== SPLASH_INDICATOR) {
+                    elements.iframe.style.visibility = 'visible';
+                }
+            } else if (defaultMode === 'GOOGLE') {
+                // Show Google iframe when loaded
+                elements.googleFrameMain.style.visibility = 'visible';
+            }
+        }
+
+
+        // --- Initialization ---
+
+        function initApp() {
+            // 1. Load state from storage (or initialize fresh)
+            loadState();
+            
+            // 2. Render the initial UI state
+            updateUI(true);
+            
+            // 3. Attach iframe load listeners
+            elements.iframe.addEventListener('load', iframeLoaded);
+            elements.googleFrameMain.addEventListener('load', iframeLoaded);
+            
+            // 4. If no mode is set, open the selection modal right away
+            if (!localStorage.getItem(STORAGE_KEY_MODE)) {
+                toggleModeSelectionModal(true);
+            }
+        }
+
+        // Start the application
+        window.onload = initApp;
+
+    </script>
+</body>
+</html>
