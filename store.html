@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini Feature Store</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        /* Apply Inter font and smooth transitions */
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            overflow: hidden; /* Prevent scroll on splash screen initially */
+        }
+        /* Custom class for smooth fading on the splash screen */
+        .splash-fade {
+            transition: opacity 0.5s ease-in-out, visibility 0.5s ease-in-out;
+        }
+        /* Style for the sidebar tabs */
+        .tab-item {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            transition: background-color 0.15s, color 0.15s;
+            border-radius: 0.5rem;
+        }
+        .tab-item.active {
+            background-color: #2563EB; /* Blue-600 */
+            color: white;
+            font-weight: 600;
+        }
+        .tab-item:not(.active):hover {
+            background-color: #f3f4f6; /* Gray-100 */
+        }
+        /* Custom scrollbar for better look */
+        .content-scroll {
+            scrollbar-width: thin;
+            scrollbar-color: #9ca3af #f3f4f6;
+        }
+        .content-scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+        .content-scroll::-webkit-scrollbar-thumb {
+            background-color: #9ca3af;
+            border-radius: 4px;
+        }
+        .content-scroll::-webkit-scrollbar-track {
+            background-color: #f3f4f6;
+        }
+        .wallpaper-card-image {
+            background-size: cover;
+            background-position: center;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+    <!-- 1. SPLASH SCREEN -->
+    <div id="splash-screen" class="splash-fade fixed inset-0 flex flex-col items-center justify-center bg-white z-50 opacity-100 visible">
+        <i class="fas fa-store text-8xl text-blue-600 animate-pulse"></i>
+        <h1 class="mt-6 text-3xl font-bold text-gray-700">Loading Store...</h1>
+    </div>
+
+    <!-- 2. MAIN APPLICATION CONTAINER -->
+    <div id="main-app" class="hidden h-screen flex">
+
+        <!-- Sidebar / Navigation -->
+        <div class="w-20 md:w-64 bg-white border-r border-gray-200 shadow-lg p-4 flex flex-col">
+            <h1 class="text-2xl font-extrabold text-blue-600 mb-8 hidden md:block">Store</h1>
+            <div id="tabs-container" class="space-y-2">
+                <!-- Tabs will be rendered here -->
+            </div>
+            <!-- User ID placeholder -->
+             <div class="mt-auto pt-4 text-xs text-gray-400 border-t border-gray-100 hidden md:block">
+                User ID: <span id="user-id">N/A</span>
+            </div>
+        </div>
+
+        <!-- Content Area -->
+        <main class="flex-1 p-4 md:p-8 overflow-y-auto content-scroll">
+            <h2 id="content-title" class="text-3xl font-bold text-gray-800 mb-6">Popular Items</h2>
+            <div id="item-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <!-- Store items will be rendered here -->
+            </div>
+        </main>
+    </div>
+
+    <!-- 3. INSTALLATION/DOWNLOAD MODAL -->
+    <div id="modal-backdrop" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 z-50 flex items-center justify-center" onclick="closeModal()">
+        <div id="modal-content" class="bg-white rounded-xl shadow-2xl w-full max-w-md m-4 p-6 transform transition-all scale-100" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center mb-4 border-b pb-3">
+                <h3 id="modal-item-name" class="text-xl font-bold text-gray-800"></h3>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 p-2 rounded-full transition-colors">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <p class="text-gray-600" id="modal-item-type-text"></p>
+                <div class="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                    <p class="text-sm font-semibold text-blue-700 mb-2">Download Link:</p>
+                    <a id="modal-link" href="#" target="_blank" class="block text-blue-600 hover:text-blue-800 break-words underline transition-colors"></a>
+                </div>
+                <div>
+                    <p class="text-sm font-semibold text-gray-700 mb-2">Instructions:</p>
+                    <p id="modal-instructions" class="text-gray-500 text-sm leading-relaxed"></p>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end">
+                <button onclick="closeModal()" class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition duration-150">
+                    Got It
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- START OF EASILY EDITABLE DATA ---
+
+        /**
+         * The core data array for all apps and wallpapers.
+         * The 'link' for wallpapers now serves as both the image URL for preview and the download link.
+         * * NOTE: Using placehold.co links for mock image content.
+         */
+        const storeItems = [
+            // --- APPS ---
+            {
+                id: 1,
+                name: "Ultimate Todo List",
+                type: "app",
+                isPopular: true,
+                iconClass: "fas fa-clipboard-list",
+                link: "https://todo.example.com/download",
+                instructions: "Download the APK or follow the link to the web version. Requires account setup.",
+                color: "text-green-500"
+            },
+            {
+                id: 2,
+                name: "Budget Tracker Pro",
+                type: "app",
+                isPopular: true,
+                iconClass: "fas fa-piggy-bank",
+                link: "https://budget.example.com/install",
+                instructions: "A simple install that runs directly in your browser. No registration required.",
+                color: "text-yellow-600"
+            },
+            {
+                id: 3,
+                name: "Star Gazer VR",
+                type: "app",
+                isPopular: false,
+                iconClass: "fas fa-globe",
+                link: "https://stars.example.com/vr_download",
+                instructions: "Requires a compatible VR headset. See documentation for setup.",
+                color: "text-indigo-500"
+            },
+            {
+                id: 4,
+                name: "Simple Calculator",
+                type: "app",
+                isPopular: false,
+                iconClass: "fas fa-calculator",
+                link: "https://calc.example.com/simple_install",
+                instructions: "Download the zipped executable and run it on your desktop.",
+                color: "text-gray-700"
+            },
+
+            // --- WALLPAPERS (Link is now the image URL) ---
+            {
+                id: 5,
+                name: "Nebula Cosmos (4K)",
+                type: "wallpaper",
+                isPopular: true,
+                // The link is now the direct image URL
+                link: "https://placehold.co/400x200/4F46E5/FFFFFF/png?text=NEBULA+4K",
+                instructions: "Right-click and save the image directly. This is a 4K resolution wallpaper.",
+                color: "bg-blue-200", 
+            },
+            {
+                id: 6,
+                name: "Minimalist Geometry",
+                type: "wallpaper",
+                isPopular: false,
+                // The link is now the direct image URL
+                link: "https://placehold.co/400x200/EC4899/FFFFFF/png?text=GEOMETRY+HD",
+                instructions: "High-resolution PNG file. Right-click and save the image directly.",
+                color: "bg-pink-200",
+            },
+            {
+                id: 7,
+                name: "Cyberpunk Cityscape",
+                type: "wallpaper",
+                isPopular: true,
+                // The link is now the direct image URL
+                link: "https://placehold.co/400x200/9333EA/FFFFFF/png?text=CYBERPUNK+VIBES",
+                instructions: "Download the JPG file and enjoy the vibrant colors.",
+                color: "bg-purple-200",
+            },
+        ];
+
+        // --- END OF EASILY EDITABLE DATA ---
+
+        // App state and constants
+        const tabs = [
+            { id: 'popular', name: 'Popular', icon: 'fas fa-star' },
+            { id: 'apps', name: 'Apps', icon: 'fas fa-mobile-alt' },
+            { id: 'wallpapers', name: 'Wallpapers', icon: 'fas fa-image' }
+        ];
+        let currentTab = 'popular';
+
+        // DOM elements
+        const $splashScreen = document.getElementById('splash-screen');
+        const $mainApp = document.getElementById('main-app');
+        const $tabsContainer = document.getElementById('tabs-container');
+        const $itemList = document.getElementById('item-list');
+        const $contentTitle = document.getElementById('content-title');
+        const $modalBackdrop = document.getElementById('modal-backdrop');
+        const $modalItemName = document.getElementById('modal-item-name');
+        const $modalLink = document.getElementById('modal-link');
+        const $modalInstructions = document.getElementById('modal-instructions');
+        const $modalItemTypeText = document.getElementById('modal-item-type-text');
+        const $userId = document.getElementById('user-id');
+        
+        // Mock User ID (since we are not using Firebase auth, but need an ID per instructions)
+        $userId.textContent = crypto.randomUUID();
+
+
+        // --- RENDERING FUNCTIONS ---
+
+        /**
+         * Renders the navigation tabs and sets up click listeners.
+         */
+        function renderTabs() {
+            $tabsContainer.innerHTML = tabs.map(tab => `
+                <div class="tab-item ${tab.id === currentTab ? 'active' : ''}" data-tab="${tab.id}" onclick="switchTab('${tab.id}')">
+                    <i class="${tab.icon} mr-0 md:mr-3 text-lg md:text-base"></i>
+                    <span class="hidden md:inline">${tab.name}</span>
+                </div>
+            `).join('');
+        }
+
+        /**
+         * Renders the content (apps/wallpapers) based on the selected tab.
+         * @param {string} tabId - The ID of the current tab ('popular', 'apps', 'wallpapers').
+         */
+        function renderItems(tabId) {
+            let filteredItems = [];
+            let title = "";
+
+            switch (tabId) {
+                case 'popular':
+                    filteredItems = storeItems.filter(item => item.isPopular);
+                    title = "Popular Items";
+                    break;
+                case 'apps':
+                    filteredItems = storeItems.filter(item => item.type === 'app');
+                    title = "All Applications";
+                    break;
+                case 'wallpapers':
+                    filteredItems = storeItems.filter(item => item.type === 'wallpaper');
+                    title = "Wallpapers & Themes";
+                    break;
+            }
+
+            $contentTitle.textContent = title;
+            $itemList.innerHTML = filteredItems.map(item => createItemCard(item)).join('');
+        }
+
+        /**
+         * Creates the HTML structure for an individual app or wallpaper card.
+         * @param {object} item - The item object from storeItems.
+         * @returns {string} The HTML string for the card.
+         */
+        function createItemCard(item) {
+            if (item.type === 'app') {
+                return `
+                    <div class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition duration-300 transform hover:-translate-y-0.5 border border-gray-100 flex flex-col">
+                        <div class="flex items-center mb-4">
+                            <div class="w-12 h-12 flex items-center justify-center rounded-xl ${item.color.replace('text-', 'bg-')} bg-opacity-10 text-xl mr-4">
+                                <i class="${item.iconClass} ${item.color}"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-800">${item.name}</h3>
+                                ${item.isPopular ? '<span class="text-xs font-medium text-red-500 bg-red-100 px-2 py-0.5 rounded-full">Popular</span>' : ''}
+                            </div>
+                        </div>
+                        <p class="text-sm text-gray-500 flex-grow mb-4">${item.instructions.substring(0, 70)}${item.instructions.length > 70 ? '...' : ''}</p>
+                        <button onclick="showDetails(${item.id})" class="mt-auto px-4 py-2 bg-blue-600 text-white font-medium rounded-lg shadow-md hover:bg-blue-700 transition duration-150">
+                            Install
+                        </button>
+                    </div>
+                `;
+            } else if (item.type === 'wallpaper') {
+                // IMPORTANT: The background-image URL is now taken from item.link
+                return `
+                    <div class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition duration-300 transform hover:-translate-y-0.5 border border-gray-100 flex flex-col">
+                        <div class="h-32 flex items-center justify-center wallpaper-card-image text-white font-bold" 
+                            style="background-image: url('${item.link}');">
+                            <!-- Image is loaded via background-image: url('${item.link}') -->
+                        </div>
+                        <div class="p-4 flex flex-col flex-grow">
+                            <div class="flex justify-between items-center mb-2">
+                                <h3 class="text-lg font-semibold text-gray-800">${item.name}</h3>
+                                ${item.isPopular ? '<span class="text-xs font-medium text-red-500 bg-red-100 px-2 py-0.5 rounded-full">Popular</span>' : ''}
+                            </div>
+                            <button onclick="showDetails(${item.id})" class="mt-auto px-4 py-2 bg-purple-600 text-white font-medium rounded-lg shadow-md hover:bg-purple-700 transition duration-150">
+                                Download
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+            return '';
+        }
+
+        // --- INTERACTION FUNCTIONS ---
+
+        /**
+         * Changes the active tab and re-renders the content.
+         * @param {string} tabId - The ID of the tab to switch to.
+         */
+        function switchTab(tabId) {
+            currentTab = tabId;
+            renderTabs();
+            renderItems(tabId);
+        }
+
+        /**
+         * Shows the custom modal with item details.
+         * @param {number} itemId - The ID of the item to show details for.
+         */
+        function showDetails(itemId) {
+            const item = storeItems.find(i => i.id === itemId);
+            if (!item) return;
+
+            $modalItemName.textContent = item.name;
+            $modalLink.href = item.link;
+            $modalLink.textContent = item.link;
+            $modalInstructions.textContent = item.instructions;
+
+            const action = item.type === 'app' ? 'Installation' : 'Download';
+            $modalItemTypeText.innerHTML = `<span class="font-medium">${action}</span> instructions for your new ${item.type}.`;
+
+            $modalBackdrop.classList.remove('hidden');
+            // Disable body scrolling
+            document.body.style.overflow = 'hidden';
+        }
+
+        /**
+         * Hides the custom modal.
+         */
+        function closeModal() {
+            $modalBackdrop.classList.add('hidden');
+            // Re-enable body scrolling
+            document.body.style.overflow = 'auto';
+        }
+
+        /**
+         * Initialization function: Handles splash screen and initial app load.
+         */
+        function init() {
+            // 1. Render initial UI components
+            renderTabs();
+            renderItems(currentTab);
+
+            // 2. Splash Screen Logic: Wait 2 seconds, then fade out
+            setTimeout(() => {
+                // Start the fade out
+                $splashScreen.style.opacity = '0';
+
+                // After the transition finishes (0.5s), hide it completely
+                setTimeout(() => {
+                    $splashScreen.style.visibility = 'hidden';
+                    $splashScreen.classList.add('hidden'); // Ensure it's hidden for accessibility
+                    $mainApp.classList.remove('hidden');
+                    document.body.style.overflow = 'auto'; // Re-enable body scrolling
+                }, 500); // Must match CSS transition time
+            }, 2000);
+        }
+
+        // Start the application after the browser has loaded the DOM
+        window.onload = init;
+    </script>
+</body>
+</html>
