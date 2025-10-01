@@ -1,39 +1,166 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<title>Aurora Project</title>
-<style>
-  body {
-    background-color: white;
-    font-family: Arial, sans-serif;
-    margin: 50px;
-    line-height: 1.6;
-    color: black;
-  }
-  .container {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 20px;
-  }
-  a {
-    color: blue;
-    text-decoration: underline;
-  }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aurora Information Hub</title>
+    <style>
+        /* Light Theme CSS */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9; /* Very light gray background */
+            color: #333; /* Dark text */
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Styling */
+        .sidebar {
+            width: 250px;
+            background-color: #fff; /* White sidebar */
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+            padding-top: 20px;
+            flex-shrink: 0; /* Prevents sidebar from shrinking */
+        }
+
+        .sidebar h2 {
+            text-align: center;
+            color: #007bff; /* Blue heading */
+            margin-bottom: 20px;
+        }
+
+        .sidebar a {
+            display: block;
+            padding: 10px 20px;
+            text-decoration: none;
+            color: #333;
+            border-left: 5px solid transparent;
+            transition: background-color 0.2s, border-left-color 0.2s;
+        }
+
+        .sidebar a:hover {
+            background-color: #e9ecef; /* Light hover background */
+            border-left-color: #007bff;
+        }
+
+        .sidebar a.active {
+            background-color: #e9ecef;
+            border-left-color: #007bff;
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        /* Main Content Styling */
+        .main-content {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto; /* Allows the main content area to scroll */
+        }
+
+        .page {
+            display: none; /* All pages are hidden by default */
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .page.active {
+            display: block; /* The active page is visible */
+        }
+
+        .page h1 {
+            color: #007bff;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+
+        .page p {
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+    </style>
 </head>
 <body>
 
-<div class="container">
-  <p style="text-align: justify;">Dear User,</p>
+    <div class="sidebar">
+        <h2>Aurora Hub</h2>
+        <a href="#" data-page-id="page-aurora" class="active">What is Aurora?</a>
+        <a href="#" data-page-id="page-guide">New User Guide</a>
+        <a href="#" data-page-id="page-install">How to Install Apps</a>
+        
+    </div>
 
-  <p style="text-align: justify;">Thank you very much for showing interest in our project Aurora. Aurora is a web based project made by Mohtadi Azad Mahi on Friday, 26 September 2025. The aim of this project is to achieve a complete operating system (os) on the web designed to give a desktop like experience. Aurora is a sub project under the project <i>DocuWrite Pro</i> (RAW: <a href="sites.google.com/view/docuwritepro">sites.google.com/view/docuwritepro</a>) by Education By Mohtadi Azad (RAW: <a href="https://662d1c5ead845.site123.me">https://662d1c5ead845.site123.me</a>). The official version of Aurora is published on a GitHub Repo by Mahi902. The URL for this report is <a href="mahi902.github.io/Aurora">mahi902.github.io/Aurora</a> (RAW: <a href="mahi902.github.io/Aurora/index.html">mahi902.github.io/Aurora/index.html</a>). All the materials used in this project are completely free to use services. The project is licensed under <i>MIT License</i> and the creator (<i>Mohtadi Azad Mahi</i>) has full rights to edit the project or modify its content. The project is currently in development-face. Thank you again for showing interest in <i>Aurora</i>.</p>
+    <div class="main-content">
 
-  <p style="text-align: justify;">I wish you a great experience.</p>
+        <div id="page-aurora" class="page active">
+            <p> Dear User, Thank you very much for showing interest in our project Aurora. Aurora is a web based project made by Mohtadi Azad Mahi on Friday, 26 September 2025. The aim of this project is to achieve a complete operating system (os) on the web designed to give a desktop like experience. Aurora is a sub project under the project DocuWrite Pro (RAW: sites.google.com/view/docuwritepro) by Education By Mohtadi Azad (RAW: https://662d1c5ead845.site123.me). The official version of Aurora is published on a GitHub Repo by Mahi902. The URL for this report is mahi902.github.io/Aurora (RAW: mahi902.github.io/Aurora/index.html). All the materials used in this project are completely free to use services. The project is licensed under MIT License and the creator (Mohtadi Azad Mahi) has full rights to edit the project or modify its content. The project is currently in development-face. Thank you again for showing interest in Aurora. I wish you a great experience. Mohtadi Azad Mahi
+Creator & Operator of project Aurora
+mohtadiazaadmahi902@gmail.com</p>
+        </div>
 
-  <p style="text-align: right;">Mohtadi Azad Mahi<br>
-  Creator & Operator of project Aurora<br>
-  mohtadiazaadmahi902@gmail.com</p>
-</div>
+        <div id="page-guide" class="page">
+            <h1>New User Guide: Getting Started</h1>
+            <p>Hi! If you are a new first time Aurora User and this is your first time using Aurora you <	b>must</b> do the following immediately.</p>
+            <h2>Step 1: Setting Up an account.</h2>
+            <p>To make your device fully <b>yours</b> you should start by making an account. Just go to Settings > User > Set your name and pfp url > Click Save User Settings.</p>
+            <h2>Step 2: Setting Up a password</h2>
+            <p><b>This is the most important step in setting up your device.</b> The first time you visit Aurora you are granted access without any password. From next on you will be asked for a password. If you don't setup a password now you will be locked up forever. So make your password by Settings > User > Change Device Password > Save User Settings.</p>
+            
+        </div>
+
+        <div id="page-install" class="page">
+            <h1>New App Installation</h1>
+            <p>Installing Applications in Aurora is very simple. Just-</p>
+            <ol>
+                <li>Open Shop: Locate the 'Shop' icon on your desktop or in the main menu.</li>
+                <li>Search: Search your designated application.</li>
+                <li>S1: Click the 'Download' button.</li>
+                <li>S2: Copy the link to your clipboard.</li>
+                <li>S3: Go to the 'Settings' app. Go to the 'Programs' tab. Scroll down to 'Install New Application'. Enter the app name, App source URL (The one you copied), and enter the font awesome icon according to your liking.</li>
+<li>S4: Finally click the 'Install App' button and done!</li>
+            </ol>
+            <p>Downloaded apps can also be deleted from the 'Installed Applications' section from the 'Programs' tab in the 'Settings' app.</p>
+        </div>
+
+        
+
+    </div>
+
+    <script>
+        // JavaScript for Page Switching Logic
+        const sidebarLinks = document.querySelectorAll('.sidebar a');
+        const pages = document.querySelectorAll('.page');
+
+        sidebarLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+
+                // 1. Get the ID of the page to show
+                const targetPageId = this.getAttribute('data-page-id');
+
+                // 2. Deactivate all links and pages
+                sidebarLinks.forEach(l => l.classList.remove('active'));
+                pages.forEach(p => p.classList.remove('active'));
+
+                // 3. Activate the clicked link
+                this.classList.add('active');
+
+                // 4. Activate the corresponding page
+                const targetPage = document.getElementById(targetPageId);
+                if (targetPage) {
+                    targetPage.classList.add('active');
+                    // Scroll to the top of the main content when a new page is loaded
+                    document.querySelector('.main-content').scrollTop = 0;
+                }
+            });
+        });
+    </script>
 
 </body>
 </html>
