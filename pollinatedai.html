@@ -3,14 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pollinated Chatbot</title>
-    <!-- Load Tailwind CSS -->
+    <title>Pollinated Chatbot (GitHub Pages Ready)</title>
+    <!-- Load Tailwind CSS from CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Load Google Material Symbols -->
+    <!-- Load Google Material Symbols from CDN -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined" rel="stylesheet">
     <style>
-        /* Define Inter font for a clean look */
+        /* Define Inter font for a clean look using standard link */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        
         :root {
             --primary-color: #1e40af; /* Blue-700 */
             --primary-hover: #1d4ed8; /* Blue-600 */
@@ -182,15 +183,16 @@
             </button>
         </div>
         <p class="text-sm text-gray-700 mb-4">
-            This is Pollinated. A chatbot that can perform basic actions. It had a large generative capability alongside image generation from pollinations.ai..
+            This is Pollinated, a demonstration chatbot utilizing external generative AI services.
         </p>
         <ul class="list-disc list-inside text-xs text-gray-600 space-y-2">
-            <li><span class="font-semibold">Text Generation:</span> Uses <code class="bg-gray-200 rounded px-1">A list of LLM's</code>.</li>
-            <li><span class="font-semibold">Image Generation:</span> Uses <code class="bg-gray-200 rounded px-1">image.pollinations.ai</code></li>
+            <li><span class="font-semibold">Text Generation:</span> Calls external API at <code class="bg-gray-200 rounded px-1">https://text.pollinations.ai/</code>.</li>
+            <li><span class="font-semibold">Image Generation:</span> Calls external API at <code class="bg-gray-200 rounded px-1">https://image.pollinations.ai/prompt/</code></li>
             <li><span class="font-semibold">History:</span> This version does not save chat history.</li>
+            <li><span class="font-semibold">Compatibility:</span> Designed for static hosting environments like GitHub Pages.</li>
         </ul>
         <div class="mt-auto pt-6 border-t">
-            <p class="text-xs text-gray-500">App Version 1.5 - Aurora</p>
+            <p class="text-xs text-gray-500">App Version 1.5 - Aurora (GitHub Compatible)</p>
         </div>
     </div>
 
@@ -212,17 +214,16 @@
 
     <script>
         // --- Configuration & Constants ---
+        // Direct API calls (CORS must be handled by the API provider)
         const TEXT_API = 'https://text.pollinations.ai/';
         const IMAGE_API = 'https://image.pollinations.ai/prompt/';
-        // Use a CORS proxy to bypass CORS restrictions
-        const CORS_PROXY = 'https://cors-anywhere.herokuapp.com/';
         
         // --- State Variables ---
-        let chatHistory = []; // Only holds messages for the current session
+        let chatHistory = []; 
         let isSending = false;
         let isImageMode = false;
-        let isChatVisible = false; // Tracks if the chat history area is showing
-        let currentTypingAnimation = null; // Track current typing animation
+        let isChatVisible = false;
+        let currentTypingAnimation = null;
 
         // --- DOM Elements ---
         const chatHistoryEl = document.getElementById('chat-history');
@@ -244,24 +245,17 @@
 
         /**
          * Generic API fetch with exponential backoff for robustness.
+         * The function performs a direct fetch, relying on the target API to handle CORS.
          */
         async function apiCallWithBackoff(url, maxRetries = 3) {
             for (let attempt = 0; attempt < maxRetries; attempt++) {
                 try {
-                    // Use CORS proxy for text API calls to avoid CORS issues
-                    const finalUrl = url.includes('text.pollinations.ai') ? CORS_PROXY + url : url;
-                    
-                    const response = await fetch(finalUrl, { 
-                        mode: 'cors',
-                        headers: {
-                            // Add some headers that might help with CORS
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    });
+                    const response = await fetch(url);
                     
                     if (!response.ok) {
                         if (attempt < maxRetries - 1) {
                             const delay = Math.pow(2, attempt) * 1000 + Math.random() * 500;
+                            console.warn(`API call failed (Attempt ${attempt + 1}/${maxRetries}). Retrying in ${delay.toFixed(0)}ms.`);
                             await new Promise(resolve => setTimeout(resolve, delay));
                             continue;
                         }
@@ -271,6 +265,7 @@
                 } catch (error) {
                     if (attempt < maxRetries - 1) {
                         const delay = Math.pow(2, attempt) * 1000 + Math.random() * 500;
+                        console.error(`Fetch error (Attempt ${attempt + 1}/${maxRetries}):`, error.message);
                         await new Promise(resolve => setTimeout(resolve, delay));
                         continue;
                     }
@@ -281,7 +276,7 @@
         }
 
         /**
-         * Simple function for displaying system messages.
+         * Simple function for displaying system messages. (Replaces alert/confirm)
          */
         function openModal(title, message, isError = false) {
             modalTitleEl.textContent = title;
@@ -307,7 +302,6 @@
             sendBtnEl.disabled = sending || userInputEl.value.trim() === '';
             loadingIndicatorEl.classList.toggle('hidden', !sending);
             
-            // Disable plus button while sending
             document.getElementById('plus-btn').disabled = sending;
         }
         
@@ -335,26 +329,29 @@
         }
         
         /**
-         * Copies text to the clipboard and gives visual feedback via the button icon.
+         * Copies text to the clipboard using the modern Clipboard API.
          */
         function copyToClipboard(button, text) {
             if (!text) return;
-            // Use modern clipboard API (with fallback if needed, though this is generally sufficient)
-            navigator.clipboard.writeText(text).then(() => {
-                const originalIcon = button.innerHTML;
-                button.innerHTML = '<span class="material-symbols-outlined text-base text-green-500">done</span>';
-                setTimeout(() => {
-                    button.innerHTML = originalIcon;
-                }, 2000);
-            }).catch(err => {
-                console.error("Failed to copy text: ", err);
-                openModal("Copy Failed", "Could not automatically copy text. Please try manually.", true);
-            });
+            
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    const originalIcon = button.innerHTML;
+                    button.innerHTML = '<span class="material-symbols-outlined text-base text-green-500">done</span>';
+                    setTimeout(() => {
+                        button.innerHTML = originalIcon;
+                    }, 2000);
+                }).catch(err => {
+                    console.error("Failed to copy text: ", err);
+                    openModal("Copy Failed", "Could not automatically copy text to clipboard.", true);
+                });
+            } else {
+                 openModal("Clipboard Unavailable", "Your browser does not support automatic clipboard copying. Please copy manually.", true);
+            }
         }
 
         // --- UI Rendering ---
         function displayMessage(message) {
-            // Add message to in-memory history
             chatHistory.push(message); 
 
             const isUser = message.sender === 'user';
@@ -365,7 +362,6 @@
             const messageWrapper = document.createElement('div');
             messageWrapper.className = `flex ${alignment}`;
             
-            // Container for message and action buttons
             const contentContainer = document.createElement('div');
             contentContainer.className = isUser ? 'flex flex-col items-end' : 'flex flex-col items-start';
 
@@ -383,15 +379,13 @@
                 const contentText = document.createElement('p');
                 contentText.className = 'whitespace-pre-wrap';
                 
-                // If this is a bot message, we'll display it word by word
                 if (!isUser && message.content) {
-                    // Start with empty content and add typing cursor
+                    // Bot message: prepare for typing animation
                     contentText.textContent = '';
                     const cursorSpan = document.createElement('span');
                     cursorSpan.className = 'typing-cursor';
                     contentText.appendChild(cursorSpan);
                     
-                    // Store reference to this element for the typing animation
                     messageBubble.typingElement = contentText;
                     messageBubble.fullContent = message.content;
                 } else {
@@ -434,7 +428,15 @@
                 copyButton.className = 'text-gray-500 hover:text-blue-600 transition duration-150 p-1 rounded-full text-xs';
                 copyButton.innerHTML = '<span class="material-symbols-outlined text-base">content_copy</span>';
                 copyButton.title = "Copy to clipboard";
-                copyButton.onclick = () => copyToClipboard(copyButton, contentToCopy);
+                
+                // Set the function to copy the text content or image prompt
+                copyButton.onclick = () => {
+                    // Ensure we copy the final full text if animation is ongoing
+                    const textToCopy = message.type === 'text' && messageBubble.fullContent 
+                        ? messageBubble.fullContent 
+                        : contentToCopy;
+                    copyToClipboard(copyButton, textToCopy);
+                };
                 
                 actionRow.appendChild(copyButton);
                 contentContainer.appendChild(actionRow);
@@ -447,7 +449,6 @@
             if (!isChatVisible) {
                 welcomeMessageEl.classList.add('hidden');
                 chatHistoryEl.classList.remove('hidden');
-                // Adjust main content alignment for conversation flow
                 chatMainContentEl.classList.remove('justify-center', 'items-center');
                 chatMainContentEl.classList.add('justify-start', 'items-start');
                 isChatVisible = true;
@@ -474,31 +475,25 @@
             
             if (!textElement || !fullText) return;
             
-            // Split text into words
             const words = fullText.split(/\s+/);
             const totalWords = words.length;
             
-            // Calculate delay per word to ensure total time is 1 second max
-            const maxTotalTime = 1000; // 1 second maximum
-            const delayPerWord = Math.min(maxTotalTime / totalWords, 100); // Max 100ms per word, min to reach 1s
+            // Calculate delay per word to ensure a smooth, quick animation
+            const maxTotalTime = 1000; 
+            const delayPerWord = Math.min(maxTotalTime / totalWords, 100); 
             
             let currentWordIndex = 0;
             
             function typeNextWord() {
                 if (currentWordIndex < totalWords) {
-                    // Remove the typing cursor
                     const cursor = textElement.querySelector('.typing-cursor');
-                    if (cursor) {
-                        cursor.remove();
-                    }
+                    if (cursor) cursor.remove();
                     
-                    // Add the next word
                     if (currentWordIndex > 0) {
                         textElement.textContent += ' ';
                     }
                     textElement.textContent += words[currentWordIndex];
                     
-                    // Add the cursor back
                     const newCursor = document.createElement('span');
                     newCursor.className = 'typing-cursor';
                     textElement.appendChild(newCursor);
@@ -507,18 +502,15 @@
                     currentTypingAnimation = setTimeout(typeNextWord, delayPerWord);
                     scrollToBottom();
                 } else {
-                    // Animation complete, remove cursor
                     const cursor = textElement.querySelector('.typing-cursor');
-                    if (cursor) {
-                        cursor.remove();
-                    }
+                    if (cursor) cursor.remove();
                     currentTypingAnimation = null;
                 }
             }
             
-            // Start the animation
             currentTypingAnimation = setTimeout(typeNextWord, delayPerWord);
         }
+
 
         // --- API Call Logic ---
 
@@ -530,7 +522,6 @@
             const text = await response.text();
             
             const trimmedText = text.trim();
-            // Check for empty response text.
             if (trimmedText.length === 0) {
                  throw new Error("Received empty response from text API.");
             }
@@ -540,8 +531,8 @@
 
         async function fetchImageResponse(prompt) {
             const encodedPrompt = encodeURIComponent(prompt);
-            const url = `${IMAGE_API}${encodedPrompt}`;
-            return url; // The image API returns the image directly at the URL
+            // The image API directly returns the image on the URL
+            return `${IMAGE_API}${encodedPrompt}`; 
         }
 
         // --- Feature Functions ---
@@ -549,9 +540,8 @@
         async function fetchWelcomeMessage() {
             welcomeLoaderEl.classList.remove('hidden');
 
-            try {
-                // Use a simple, hardcoded greeting instead of API call to avoid CORS issues
-                const greetings = [
+            // Use hardcoded greetings to avoid making unnecessary API calls on load
+            const greetings = [
     "Hello! How can I help?",
     "Hi there! Ready to chat?",
     "Welcome! What can I do for you?",
@@ -657,16 +647,10 @@
     "Hello! What shall we discover together?"
 ];
                 
-                // Pick a random greeting from our list
-                const randomGreeting = greetings[Math.floor(Math.random() * greetings.length)];
-                mainWelcomeTitleEl.textContent = randomGreeting;
+            const randomGreeting = greetings[Math.floor(Math.random() * greetings.length)];
+            mainWelcomeTitleEl.textContent = randomGreeting;
                 
-            } catch (error) {
-                // If there's any error, we'll just keep the default greeting
-                console.error("Failed to set welcome message:", error);
-            } finally {
-                welcomeLoaderEl.classList.add('hidden');
-            }
+            welcomeLoaderEl.classList.add('hidden');
         }
         
         function openInfoBox() {
@@ -720,13 +704,26 @@
                 }
             } catch (error) {
                 console.error("API call error:", error);
+                
+                // Stop any running typing animation
+                if (currentTypingAnimation) {
+                    clearTimeout(currentTypingAnimation);
+                    currentTypingAnimation = null;
+                }
+
                 // Display error message in chat history as a bot message
                 displayMessage({ 
                     sender: 'bot', 
-                    content: `🤖 Error: Failed to get response. Please try again. Details: ${error.message.substring(0, 100)}...`, 
+                    content: `🤖 Error: Failed to get response. This is likely due to CORS restrictions or the external API being down. Details: ${error.message.substring(0, 100)}...`, 
                     type: 'text' 
                 });
-                openModal("API Communication Error", `There was an issue communicating with the Pollinations.ai API.`, true);
+                
+                openModal("API Communication Error", 
+                    `There was an issue communicating with the external API (${error.message}). ` + 
+                    `Please check if the API supports CORS for your static hosting environment.`, 
+                    true
+                );
+
             } finally {
                 updateUIState(false);
             }
