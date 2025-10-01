@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Aggregator</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Use Inter font family -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-color: #f0f4f8; /* Light blue/gray background */
+        }
+        #app-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            /* Ensures the content within the container takes up all height */
+            height: 100vh;
+        }
+        #main-content {
+            flex-grow: 1;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            /* Default padding for the welcome screen */
+            padding: 1rem;
+        }
+        /* Style when iframe is active to maximize screen coverage */
+        #main-content.iframe-active {
+            padding: 0;
+        }
+        #chatbot-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 0; /* No rounding when covering the entire available screen area */
+            box-shadow: none;
+            background-color: white;
+        }
+        .welcome-card-styles {
+             border-radius: 0.75rem; /* rounded-xl */
+             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-xl */
+        }
+        .modal-background {
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+    </style>
+</head>
+<body>
+
+<div id="app-container" class="w-full mx-auto">
+
+    <!-- Top Bar -->
+    <header id="topbar" class="bg-white shadow-md p-4 flex justify-between items-center z-10">
+        <div id="branding" class="text-xl font-bold text-gray-800">
+            Artificial Intelligence
+        </div>
+        <div id="topbar-content" class="flex items-center space-x-4">
+            <!-- Content changes based on selection -->
+            <div id="powered-by-text" class="text-sm text-gray-500 hidden"></div>
+            
+            <!-- AI Icon Button to open selector -->
+            <button id="choose-chatbot-btn-icon" onclick="openModal()" class="flex items-center justify-center p-2 rounded-full bg-blue-500 text-white hover:bg-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all duration-200 shadow-lg" title="Choose Chatbot Provider">
+                <!-- Icon for choosing AI/Settings -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bot">
+                    <path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M22 10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2"/></svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Area - This is where the iframe will maximize screen coverage -->
+    <main id="main-content" class="flex-grow p-4">
+        <!-- Content will be injected here: Welcome message or iframe -->
+    </main>
+
+    <!-- Bottom Bar -->
+    <footer id="bottombar" class="bg-white border-t border-gray-100 p-2 text-center text-xs text-gray-500 mt-auto shadow-inner z-10">
+        This application does not generate the information provided above.
+    </footer>
+</div>
+
+<!-- Chatbot Selection Modal -->
+<div id="selection-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center modal-background">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md m-4 p-6 border-4 border-blue-500 animate-in zoom-in-95 duration-300">
+        <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-settings mr-2 text-blue-500">
+                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 0 2.72l-.15.1a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1 0-2.72l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>
+            </svg>
+            Choose a Chatbot Provider
+        </h2>
+        <div id="chatbot-options" class="space-y-3">
+            <!-- Option 1: Chatbot App -->
+            <button onclick="selectChatbot('https://chat.chatbotapp.ai/', 'Chatbot App')"
+                    class="w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-blue-50 transition duration-150 ease-in-out shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                <span class="block font-semibold text-gray-900">Chatbot App</span>
+                <span class="block text-sm text-gray-500 truncate">https://chat.chatbotapp.ai/</span>
+            </button>
+
+            <!-- Option 2: Placeholder -->
+            <div class="w-full text-left p-3 border border-gray-100 bg-gray-50 rounded-lg opacity-60 cursor-not-allowed">
+                <span class="block font-semibold text-gray-700">More coming soon...</span>
+                <span class="block text-sm text-gray-400">Wait for new integrations!</span>
+            </div>
+        </div>
+        <button onclick="closeModal()" class="mt-6 w-full py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition duration-150">Close</button>
+    </div>
+</div>
+
+<script>
+    // --- Configuration and State ---
+    const STORAGE_KEY = 'chatAggregatorSelectedBot';
+    let currentBot = { url: null, name: null };
+    
+    // DOM elements
+    const poweredByText = document.getElementById('powered-by-text');
+    const mainContent = document.getElementById('main-content');
+    const modal = document.getElementById('selection-modal');
+
+    // --- Core Functions ---
+
+    /**
+     * Loads the stored chatbot selection from localStorage.
+     */
+    function loadSelection() {
+        try {
+            const storedData = localStorage.getItem(STORAGE_KEY);
+            if (storedData) {
+                const data = JSON.parse(storedData);
+                currentBot.url = data.url;
+                currentBot.name = data.name;
+                console.log(`Loaded stored bot: ${currentBot.name} (${currentBot.url})`);
+            }
+        } catch (error) {
+            console.error("Error loading data from localStorage:", error);
+            localStorage.removeItem(STORAGE_KEY); 
+        }
+        renderUI();
+    }
+
+    /**
+     * Renders the appropriate UI (Welcome screen or Chatbot iframe).
+     */
+    function renderUI() {
+        mainContent.innerHTML = ''; // Clear main content area
+        
+        if (currentBot.url) {
+            // --- Iframe View ---
+            
+            // 1. Update Top Bar Text
+            poweredByText.textContent = `Powered by ${currentBot.name}`;
+            poweredByText.classList.remove('hidden');
+
+            // 2. Adjust main content class to maximize iframe size
+            mainContent.classList.add('iframe-active');
+            mainContent.classList.remove('justify-center', 'items-center');
+
+            // 3. Load Iframe
+            const iframe = document.createElement('iframe');
+            iframe.id = 'chatbot-iframe';
+            iframe.src = currentBot.url;
+            iframe.title = `Chatbot: ${currentBot.name}`;
+            
+            mainContent.appendChild(iframe);
+
+        } else {
+            // --- Welcome Screen View ---
+            
+            // 1. Update Top Bar Text/Visibility
+            poweredByText.classList.add('hidden');
+
+            // 2. Show Welcome Message
+            const welcomeCard = document.createElement('div');
+            // Applying rounded-xl and shadow-xl via CSS class for clean separation
+            welcomeCard.className = 'p-10 bg-white welcome-card-styles text-center max-w-lg mx-auto border-t-4 border-blue-500';
+            welcomeCard.innerHTML = `
+                <div class="text-5xl mb-4 text-blue-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto w-12 h-12" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-square-more"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 10h.01"/><path d="M12 10h.01"/><path d="M16 10h.01"/></svg>
+                </div>
+                <h1 class="text-3xl font-extrabold text-gray-800 mb-2">Welcome!</h1>
+                <p class="text-gray-600 mb-6">Choose a chatbot provider to get started.</p>
+                <button onclick="openModal()" class="px-6 py-3 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600 transition duration-200 shadow-md focus:outline-none focus:ring-4 focus:ring-blue-300">
+                    Choose Chatbot
+                </button>
+            `;
+            
+            // 3. Adjust main content class for centering
+            mainContent.classList.remove('iframe-active');
+            mainContent.classList.add('justify-center', 'items-center');
+            mainContent.appendChild(welcomeCard);
+        }
+    }
+
+    /**
+     * Selects a chatbot, stores the choice, closes the modal, and updates the UI.
+     * @param {string} url - The URL of the chatbot service.
+     * @param {string} name - The display name of the chatbot service.
+     */
+    function selectChatbot(url, name) {
+        currentBot.url = url;
+        currentBot.name = name;
+        
+        // Save to localStorage
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(currentBot));
+        
+        closeModal();
+        renderUI();
+    }
+    
+    /**
+     * Opens the selection modal.
+     */
+    function openModal() {
+        modal.classList.remove('hidden');
+    }
+
+    /**
+     * Closes the selection modal.
+     */
+    function closeModal() {
+        modal.classList.add('hidden');
+    }
+
+    // --- Initialization ---
+    window.onload = loadSelection;
+
+</script>
+
+</body>
+</html>
