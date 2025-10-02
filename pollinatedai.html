@@ -356,26 +356,21 @@
             chatHistory.push(message); 
 
             // Inside displayMessage function:
-const isUser = message.sender === 'user';
-const color = isUser ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800';
-const role = isUser ? 'You' : 'Pollinated';
+			const isUser = message.sender === 'user';
+            const color = isUser ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800';
+            const role = isUser ? 'You' : 'Pollinated';
 
-const messageWrapper = document.createElement('div');
-// The user message wrapper now spans the full chat-history width, and aligns to the right edge.
-// The bot message wrapper is constrained to max-w-3xl and centered.
-messageWrapper.className = `flex w-full ${isUser ? 'justify-end' : 'justify-center'}`;
-
-const contentContainer = document.createElement('div');
-// We now constrain the width of the content column for the bot, but let the user side fill.
-// For consistency, let's keep the content wrapper max-w-3xl for the bot messages.
-contentContainer.className = `${isUser ? 'flex flex-col items-end' : 'flex flex-col items-start max-w-3xl w-full'}`; 
-
-const messageBubble = document.createElement('div');
-// Apply max-w-xl to all bubbles for optimal text line length readability.
-messageBubble.className = `max-w-xl p-3 rounded-xl shadow-sm ${color}`;
-// ...
+            const messageWrapper = document.createElement('div');
+            // User message wrapper takes full width and aligns to the right edge (justify-end).
+            // Bot message wrapper is centered (justify-center).
+            messageWrapper.className = `flex w-full ${isUser ? 'justify-end' : 'justify-center'}`;
             
+            const contentContainer = document.createElement('div');
+            // User content aligns right. Bot content is constrained to max-w-3xl for centering/readability.
+            contentContainer.className = `${isUser ? 'flex flex-col items-end' : 'flex flex-col items-start max-w-3xl w-full'}`; 
+
             const messageBubble = document.createElement('div');
+            // All message bubbles are limited to max-w-xl for optimal text line length.
             messageBubble.className = `max-w-xl p-3 rounded-xl shadow-sm ${color}`;
 
             const roleHeader = document.createElement('p');
