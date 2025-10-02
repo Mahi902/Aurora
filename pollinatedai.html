@@ -355,17 +355,26 @@
         function displayMessage(message) {
             chatHistory.push(message); 
 
-            const isUser = message.sender === 'user';
-            const alignment = isUser ? 'justify-end' : 'justify-start';
-            const color = isUser ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800';
-            const role = isUser ? 'You' : 'Pollinated';
+            // Inside displayMessage function:
+const isUser = message.sender === 'user';
+const color = isUser ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800';
+const role = isUser ? 'You' : 'Pollinated';
 
-            const messageWrapper = document.createElement('div');
-            messageWrapper.className = `flex ${alignment}`;
+const messageWrapper = document.createElement('div');
+// The user message wrapper now spans the full chat-history width, and aligns to the right edge.
+// The bot message wrapper is constrained to max-w-3xl and centered.
+messageWrapper.className = `flex w-full ${isUser ? 'justify-end' : 'justify-center'}`;
+
+const contentContainer = document.createElement('div');
+// We now constrain the width of the content column for the bot, but let the user side fill.
+// For consistency, let's keep the content wrapper max-w-3xl for the bot messages.
+contentContainer.className = `${isUser ? 'flex flex-col items-end' : 'flex flex-col items-start max-w-3xl w-full'}`; 
+
+const messageBubble = document.createElement('div');
+// Apply max-w-xl to all bubbles for optimal text line length readability.
+messageBubble.className = `max-w-xl p-3 rounded-xl shadow-sm ${color}`;
+// ...
             
-            const contentContainer = document.createElement('div');
-            contentContainer.className = isUser ? 'flex flex-col items-end' : 'flex flex-col items-start';
-
             const messageBubble = document.createElement('div');
             messageBubble.className = `max-w-xl p-3 rounded-xl shadow-sm ${color}`;
 
