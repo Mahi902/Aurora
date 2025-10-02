@@ -359,14 +359,14 @@
             const color = isUser ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800';
             const role = isUser ? 'You' : 'Pollinated';
 
-            const messageWrapper = document.createElement('div');
-            // User message wrapper takes full width and aligns to the right edge.
-            // Bot message wrapper is centered.
-            messageWrapper.className = `flex w-full ${isUser ? 'justify-end' : 'justify-center'}`;
+             const messageWrapper = document.createElement('div');
+            // User message wrapper aligns to the right edge (justify-end).
+            // Bot message wrapper aligns to the left edge (justify-start).
+            messageWrapper.className = `flex w-full ${isUser ? 'justify-end' : 'justify-start'}`;
             
             const contentContainer = document.createElement('div');
-            // User content aligns right. Bot content is constrained to max-w-3xl for centering/readability.
-            contentContainer.className = `${isUser ? 'flex flex-col items-end' : 'flex flex-col items-start max-w-3xl w-full'}`; 
+            // User content aligns right. Bot content aligns left. The inner message bubble still limits width.
+            contentContainer.className = `${isUser ? 'flex flex-col items-end' : 'flex flex-col items-start'}`;
 
             const messageBubble = document.createElement('div');
             // All message bubbles are limited to max-w-xl for optimal text line length.
