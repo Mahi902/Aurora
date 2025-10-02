@@ -355,14 +355,13 @@
         function displayMessage(message) {
             chatHistory.push(message); 
 
-            // Inside displayMessage function:
-			const isUser = message.sender === 'user';
+            const isUser = message.sender === 'user';
             const color = isUser ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800';
             const role = isUser ? 'You' : 'Pollinated';
 
             const messageWrapper = document.createElement('div');
-            // User message wrapper takes full width and aligns to the right edge (justify-end).
-            // Bot message wrapper is centered (justify-center).
+            // User message wrapper takes full width and aligns to the right edge.
+            // Bot message wrapper is centered.
             messageWrapper.className = `flex w-full ${isUser ? 'justify-end' : 'justify-center'}`;
             
             const contentContainer = document.createElement('div');
