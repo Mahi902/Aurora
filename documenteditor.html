@@ -4318,6 +4318,225 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+<script>
+(function(){
+  const CONF = { wpm: 200, debounceMs: 120 };
+
+  // Get all editable containers (handles single #editor and multi .editor-page)
+  function getEditors(){
+    return Array.from(document.querySelectorAll('#editor, .editor-page')).filter(Boolean);
+  }
+
+  function getFullText(){
+    const editors = getEditors();
+    if(editors.length === 0) return '';
+    return editors.map(e => (e.innerText || e.textContent || '')).join(' ');
+  }
+
+  function countWords(text){
+    if(!text) return 0;
+    // Normalize NBSP and split on whitespace
+    const t = text.replace(/\u00A0/g,' ').trim();
+    if(!t) return 0;
+    return t.split(/\s+/).filter(Boolean).length;
+  }
+
+  function safeSet(el, txt){
+    if(!el) return;
+    try{ el.textContent = txt; } catch(e){ console.error('wordcount:set', e); }
+  }
+
+  function updateWordUI(){
+    try {
+      const text = getFullText();
+      const words = countWords(text);
+      const wc = document.getElementById('word-count');
+      const rt = document.getElementById('reading-time');
+
+      if(wc) safeSet(wc, `${words} words`);
+
+      if(rt) {
+        const mins = words > 0 ? Math.max(1, Math.ceil(words / CONF.wpm)) : 0;
+        safeSet(rt, words > 0 ? `${mins} min read` : '0 min read');
+      }
+    } catch(err){
+      console.error('updateWordUI error', err);
+    }
+  }
+
+  // Debounced scheduler
+  let _timer = null;
+  function scheduleUpdate(){
+    if(_timer) clearTimeout(_timer);
+    _timer = setTimeout(()=>{ updateWordUI(); _timer = null; }, CONF.debounceMs);
+  }
+
+  // Attach listeners to any editor nodes (idempotent)
+  function attachListeners(){
+    getEditors().forEach(el => {
+      if(el.__dw_wc_attached) return;
+      el.addEventListener('input', scheduleUpdate, { passive: true });
+      el.addEventListener('paste', ()=> setTimeout(scheduleUpdate, 60), { passive: true });
+      // Watch for attribute changes like contentEditable toggles
+      const attrObs = new MutationObserver(() => scheduleUpdate());
+      attrObs.observe(el, { attributes: true, attributeFilter: ['contenteditable'] });
+      el.__dw_wc_attached = true;
+    });
+  }
+
+  // Global document fallback: catch any input that happens inside editor(s)
+  document.addEventListener('input', (e) => {
+    if(e.target && e.target.closest && e.target.closest('#editor, .editor-page')) scheduleUpdate();
+  }, true);
+
+  // Observe DOM for newly added editor elements (dynamic pages)
+  const mo = new MutationObserver((mutations) => {
+    let found = false;
+    for(const m of mutations){
+      for(const n of m.addedNodes){
+        if(n.nodeType !== 1) continue;
+        if(n.matches && (n.matches('#editor') || n.matches('.editor-page'))) { found = true; break; }
+        if(n.querySelector && (n.querySelector('#editor') || n.querySelector('.editor-page'))) { found = true; break; }
+      }
+      if(found) break;
+    }
+    if(found) { attachListeners(); scheduleUpdate(); }
+  });
+  mo.observe(document.body, { childList: true, subtree: true });
+
+  // Initial setup
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', () => { attachListeners(); updateWordUI(); });
+  } else {
+    attachListeners();
+    updateWordUI();
+  }
+
+  // Expose a safe manual trigger if you need to call from other scripts
+  window.__dw_updateWordCount = updateWordUI;
+})();
+</script>
+<!-- Floating Pollinated Assist -->
+<script>
+(function() {
+  // Load Google Material Icons if not already
+  if (!document.querySelector('link[href*="fonts.googleapis.com/icon"]')) {
+    const link = document.createElement("link");
+    link.href = "https://fonts.googleapis.com/icon?family=Material+Icons";
+    link.rel = "stylesheet";
+    document.head.appendChild(link);
+  }
+
+  // Styles
+  const style = document.createElement("style");
+  style.textContent = `
+    #pollinated-assist-btn {
+      position: fixed;
+      bottom: 50px;
+      right: 20px;
+      background: none;
+      color: #1976d2;
+      border: 2px solid #1976d2;
+      border-radius: 12px;
+      padding: 8px 14px;
+      cursor: pointer;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: Arial, sans-serif;
+      transition: all 0.3s ease;
+      z-index: 9999;
+    }
+    #pollinated-assist-btn:hover {
+      background: #1976d2;
+      color: white;
+    }
+    #pollinated-assist-window {
+      position: fixed;
+      bottom: 60px;
+      right: 20px;
+      width: 400px;
+      height: 500px;
+      max-width: 90vw;
+      background: white;
+      border: 2px solid #1976d2;
+      border-radius: 12px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.2);
+      display: none;
+      flex-direction: column;
+      resize: both;          /* 👈 makes corners & edges draggable */
+      overflow: hidden;
+      z-index: 10000;
+    }
+    #pollinated-assist-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #1976d2;
+      color: white;
+      padding: 8px 12px;
+      font-weight: bold;
+      cursor: pointer;
+      user-select: none;
+    }
+    #pollinated-assist-header .material-icons {
+      font-size: 20px;
+      cursor: pointer;
+    }
+    #pollinated-assist-iframe {
+      flex: 1;
+      border: none;
+      width: 100%;
+      height: 100%;
+    }
+  `;
+  document.head.appendChild(style);
+
+  // Button
+  const btn = document.createElement("button");
+  btn.id = "pollinated-assist-btn";
+  btn.innerHTML = `<span class="material-icons">local_florist</span> Assist`;
+  document.body.appendChild(btn);
+
+  // Window
+  const win = document.createElement("div");
+  win.id = "pollinated-assist-window";
+  win.innerHTML = `
+    <div id="pollinated-assist-header">
+      <span>Pollinated Assist</span>
+      <span class="material-icons" id="pollinated-assist-toggle">expand_more</span>
+    </div>
+    <iframe id="pollinated-assist-iframe" src="https://mahi902.github.io/Aurora/pollinatedai.html"></iframe>
+  `;
+  document.body.appendChild(win);
+
+  // Keep height a little shorter than page
+  function adjustHeight() {
+    const pageHeight = document.documentElement.scrollHeight;
+    const viewportHeight = window.innerHeight;
+    const maxHeight = Math.min(pageHeight, viewportHeight) - 100;
+    win.style.maxHeight = maxHeight + "px";
+    if (win.style.display === "flex" && win.offsetHeight > maxHeight) {
+      win.style.height = maxHeight + "px";
+    }
+  }
+  window.addEventListener("resize", adjustHeight);
+  window.addEventListener("load", adjustHeight);
+
+  // Toggle logic
+  btn.addEventListener("click", () => {
+    btn.style.display = "none";
+    win.style.display = "flex";
+    adjustHeight();
+  });
+
+  document.getElementById("pollinated-assist-toggle").addEventListener("click", () => {
+    win.style.display = "none";
+    btn.style.display = "flex";
+  });
+})();
+</script>
 
 </body>
 </html>
