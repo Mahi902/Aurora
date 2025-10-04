@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DocuWrite Pro - Google Docs Clone</title>
+    <title>DocuWrite Pro</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
@@ -4537,6 +4537,96 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 })();
 </script>
+<!-- App Splash Screen -->
+<div id="docuwrite-splash">
+  <div class="splash-content">
+    <span class="material-icons">description</span>
+    <p>DocuWrite Pro</p>
+  </div>
+</div>
 
+<style>
+  @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+
+  /* Full-page splash */
+  #docuwrite-splash {
+    position: fixed;
+    inset: 0;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 99999;
+    flex-direction: column;
+  }
+
+  /* Content styling */
+  #docuwrite-splash .splash-content {
+    text-align: center;
+  }
+
+  #docuwrite-splash .material-icons {
+    font-size: 90px;
+    background: linear-gradient(135deg, #1565c0, #1e88e5); /* darker blue gradient */
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 20px;
+    opacity: 0;
+    transform: scale(0.5);
+    transition: all 0.5s ease;
+  }
+
+  #docuwrite-splash p {
+    font-size: 32px;          /* bigger text */
+    font-family: Arial, sans-serif;
+    font-weight: bold;
+    color: #333;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.5s ease;
+  }
+
+  /* Fade out animation */
+  .fade-out {
+    animation: fadeOut 0.6s forwards;
+  }
+
+  @keyframes fadeOut {
+    to {
+      opacity: 0;
+      visibility: hidden;
+    }
+  }
+</style>
+
+<script>
+  window.addEventListener("load", () => {
+    const splash = document.getElementById("docuwrite-splash");
+    const icon = splash.querySelector(".material-icons");
+    const text = splash.querySelector("p");
+
+    // Pop-in animation
+    setTimeout(() => {
+      icon.style.opacity = "1";
+      icon.style.transform = "scale(1)";
+    }, 100);
+
+    setTimeout(() => {
+      text.style.opacity = "1";
+      text.style.transform = "translateY(0)";
+    }, 400);
+
+    // Fade out after ~1.5s
+    setTimeout(() => {
+      splash.classList.add("fade-out");
+    }, 1500);
+
+    // Remove completely after fade
+    setTimeout(() => {
+      splash.remove();
+    }, 2100);
+  });
+</script>
+	
 </body>
 </html>
