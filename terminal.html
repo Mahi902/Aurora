@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aurora Web Console</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;700&display=swap');
+        
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden; /* Prevent body scrollbars */
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #000000; /* Full Black Background */
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Terminal specific styles */
+        #terminal {
+            font-family: 'Inconsolata', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #00ff00; /* Classic Green Text */
+            background-color: #000000;
+            border-radius: 0; /* Remove rounded corners for professional look */
+            box-shadow: none; /* No glow */
+            width: 98vw; 
+            height: 98vh;
+            transition: none; /* No transition */
+        }
+        
+        /* Remove hover effect */
+        #terminal:hover {
+            box-shadow: none;
+        }
+
+        /* Scrollbar styling */
+        #output {
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #00ff00 #000000;
+        }
+
+        #output::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #output::-webkit-scrollbar-track {
+            background: #000000;
+        }
+
+        #output::-webkit-scrollbar-thumb {
+            background-color: #00ff00;
+            border-radius: 20px;
+            border: 2px solid #000000;
+        }
+
+        .prompt-line {
+            display: flex;
+        }
+
+        .cursor {
+            animation: blink 1s step-start infinite;
+            background-color: #00ff00;
+            width: 8px;
+            height: 14px;
+            display: inline-block;
+            margin-left: 2px;
+        }
+
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+
+        /* Hide the default input cursor */
+        #input {
+            caret-color: transparent;
+        }
+
+        /* Spinning ASCII loader */
+        .loading-indicator::before {
+            content: '';
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            width: 1em;
+            height: 1em;
+            margin-right: 0.5em;
+        }
+
+        @keyframes spin {
+            0% { content: '|'; }
+            25% { content: '/'; }
+            50% { content: '-'; }
+            75% { content: '\\'; }
+            100% { content: '|'; }
+        }
+
+    </style>
+</head>
+<body>
+    <!-- Terminal Container fills 98% of viewport -->
+    <div id="terminal" class="p-4 flex flex-col">
+        <!-- Header (Mock Title Bar) REMOVED for a cleaner look -->
+
+        <!-- Output Area -->
+        <div id="output" class="flex-grow p-2 overflow-y-auto">
+            <div class="text-[#00ff00] mb-2">AURORA WEB Terminal [Version 6.1.7601]</div>
+            <div class="text-[#00ff00] mb-4">Initializing secure connection to public network interface... Ready.</div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="prompt-line text-[#00ff00]">
+            <span id="path">C:\Users\Aurora></span>
+            <input type="text" id="input" autocomplete="off" class="flex-grow bg-transparent border-none outline-none text-[#00ff00] ml-1" autofocus>
+            <div id="cursor" class="cursor"></div>
+        </div>
+    </div>
+    
+    <script>
+        // --- Global Variables and Setup ---
+        const output = document.getElementById('output');
+        const input = document.getElementById('input');
+        const cursor = document.getElementById('cursor');
+        const path = document.getElementById('path');
+        const commands = {};
+        let history = [];
+        let historyIndex = -1;
+        
+        // Focus the input when clicking anywhere on the terminal
+        document.getElementById('terminal').addEventListener('click', () => input.focus());
+        input.focus();
+
+        // Simulate the blinking cursor effect on the input
+        input.addEventListener('focus', () => cursor.style.display = 'inline-block');
+        input.addEventListener('blur', () => cursor.style.display = 'none');
+
+        // --- Utility Functions ---
+
+        /**
+         * Appends a line of text to the terminal output.
+         * @param {string} text - The text to display.
+         * @param {string} color - Tailwind color class for the text.
+         */
+        function writeLine(text, color = 'text-[#00ff00]') {
+            const line = document.createElement('div');
+            line.className = color;
+            
+            // 1. Process for bold: **text** -> <b>text</b>
+            // This allows the use of markdown-like bold syntax in the output.
+            let processedText = text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+            
+            // 2. Replace newlines with <br> for multi-line output
+            line.innerHTML = processedText.replace(/\n/g, '<br>'); 
+            output.appendChild(line);
+            // Scroll to the bottom
+            output.scrollTop = output.scrollHeight;
+        }
+
+        /**
+         * Adds the command prompt line to the output history.
+         * @param {string} cmd - The executed command.
+         */
+        function writePrompt(cmd) {
+            writeLine(`${path.textContent}${cmd}`, 'text-white');
+        }
+        
+        // --- API Utilities ---
+
+        /**
+         * Placeholder for getting permission status.
+         * @param {string} permissionName - The name of the permission (e.g., 'geolocation').
+         * @returns {Promise<string>} The status string.
+         */
+        async function getPermissionStatus(permissionName) {
+            try {
+                // Check for general permissions supported by Permissions API
+                if (['geolocation', 'notifications', 'camera', 'microphone', 'clipboard-read', 'accelerometer', 'magnetometer'].includes(permissionName)) {
+                    const result = await navigator.permissions.query({ name: permissionName });
+                    return `Status: ${result.state}`;
+                } 
+                return 'Status: Unknown or not supported by Permissions API.';
+            } catch (error) {
+                return `Status: Error querying ${permissionName} (${error.message})`;
+            }
+        }
+
+        /**
+         * Generates the command output.
+         * @param {string} cmd - The command name.
+         * @param {string[]} args - The arguments.
+         */
+        function executeCommand(cmd, args) {
+            const func = commands[cmd];
+            if (func) {
+                func(args);
+            } else {
+                writeLine(`'${cmd}' is not recognized as an internal or external command, operable program or batch file.`, 'text-red-500');
+                writeLine(`Type 'help' for available commands.`);
+            }
+        }
+
+        // --- Command Definitions ---
+
+        // help - shows a list of all commands
+        commands.help = () => {
+            let output = 'Available commands:\n';
+            output += '--------------------------------------------------------------------------------\n';
+            output += 'help              - Shows this list of commands.\n';
+            output += 'clear             - Clears the terminal screen.\n';
+            output += 'dev               - Displays browser, device, and screen information.\n';
+            output += 'ip                - Displays a mock internal and public IP address.\n';
+            output += 'permissions       - Shows the status of common site permissions.\n';
+            output += 'askp [name]       - Requests access for a specific permission (e.g., "askp location").\n';
+            output += 'pos               - Attempts to get the user\'s precise location (requires permission).\n';
+            output += 'time              - Displays the full current date, time, and timezone details.\n';
+            output += 'websearch [query] - Searches the web using the Pollinations AI API and displays results.\n';
+            output += '--------------------------------------------------------------------------------\n';
+            writeLine(output, 'text-gray-300');
+        };
+
+        // clear - Clears the terminal
+        commands.clear = () => {
+            output.innerHTML = '';
+        };
+        
+        // time - Displays full time, date, and timezone info
+        commands.time = () => {
+            const now = new Date();
+            
+            // Time formats
+            const time12 = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+            const time24 = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+            
+            // Date parts
+            const day = now.toLocaleDateString('en-US', { weekday: 'long' });
+            const date = now.getDate();
+            const month = now.toLocaleDateString('en-US', { month: 'long' });
+            const year = now.getFullYear();
+            
+            // Timezone and offset calculation
+            const timezoneName = now.toLocaleTimeString('en-US', { timeZoneName: 'long' }).split(' ')[3] || now.toLocaleTimeString('en-US', { timeZoneName: 'short' }).split(' ')[3] || 'Local Time';
+            const timezoneOffsetHours = now.getTimezoneOffset() / -60;
+            const sign = timezoneOffsetHours >= 0 ? '+' : '';
+            const paddedOffset = String(Math.abs(timezoneOffsetHours)).padStart(2, '0');
+            const timezoneOffset = `UTC${sign}${paddedOffset}`;
+            
+            writeLine('System Time and Date Information:\n', 'text-yellow-400');
+            writeLine(`  Day . . . . . . . . . : ${day}`);
+            writeLine(`  Date. . . . . . . . . : ${month} ${date}, ${year}`);
+            writeLine(`  Time (12-hour). . . . : ${time12}`);
+            writeLine(`  Time (24-hour). . . . : ${time24}`);
+            writeLine(`  Time Zone . . . . . . : ${timezoneName} (${timezoneOffset})`);
+            writeLine('--------------------------------------------------');
+        };
+
+        // websearch (content) - Searches the web and returns results to the terminal.
+        commands.websearch = async (args) => {
+            if (args.length === 0) {
+                writeLine('Usage: websearch [query]', 'text-yellow-400');
+                writeLine('Example: websearch latest stock price for Google');
+                return;
+            }
+
+            const userQuery = args.join(' ');
+            
+            writeLine(`Searching the web for: "${userQuery}"...`, 'text-gray-400');
+            writeLine(`[STATUS] Initializing connection to Pollinations AI...`, 'text-yellow-400');
+
+            // Show a loading indicator
+            const loadingLine = document.createElement('div');
+            loadingLine.className = 'text-gray-500 loading-indicator';
+            loadingLine.textContent = 'Processing...';
+            output.appendChild(loadingLine);
+            output.scrollTop = output.scrollHeight;
+
+            // Using text.pollinations.ai with simple GET request
+            const apiUrl = `https://text.pollinations.ai/${encodeURIComponent(userQuery)}`;
+
+            try {
+                const response = await fetch(apiUrl);
+                
+                // Remove loading indicator
+                loadingLine.remove();
+
+                if (response.ok) {
+                    // Get the response as plain text
+                    const text = await response.text();
+                    
+                    writeLine('\n--- Search Result ---', 'text-green-500');
+                    // Display the plain text response directly
+                    writeLine(text);
+                    writeLine('---------------------\n', 'text-green-500');
+                } else {
+                    writeLine(`ERROR: API returned status ${response.status}`, 'text-red-500');
+                }
+
+            } catch (error) {
+                // Ensure loading indicator is removed on critical failure
+                loadingLine.remove();
+                writeLine(`CRITICAL ERROR: Search engine connection failed. Details: ${error.message}`, 'text-red-600');
+            }
+        };
+
+        // ip - shows mock IP addresses
+        commands.ip = () => {
+            writeLine('Windows IP Configuration\n');
+            writeLine('Ethernet adapter Ethernet:');
+            writeLine('   Connection-specific DNS Suffix  . : localdomain');
+            writeLine('   IPv4 Address (Internal) . . . . . : 192.168.1.101');
+            writeLine('   Subnet Mask . . . . . . . . . . . : 255.255.255.0');
+            writeLine('   Default Gateway . . . . . . . . . : 192.168.1.1');
+            writeLine('\nPublic IP (Mock) . . . . . . . . . . : 203.0.113.42');
+        };
+
+        // permissions - shows all the permissions granted for this site
+        commands.permissions = async () => {
+            writeLine('Querying site permissions...\n');
+            
+            const checks = [
+                'geolocation', 'notifications', 'camera', 'microphone', 'clipboard-read', 'accelerometer', 'magnetometer'
+            ];
+            
+            for (const name of checks) {
+                const status = await getPermissionStatus(name);
+                writeLine(`[${name.padEnd(16)}] ${status}`);
+            }
+        };
+        
+        // askp - asks for a specific permission access
+        commands.askp = async (args) => {
+            if (args.length === 0) {
+                writeLine('Usage: askp [permission_name]', 'text-yellow-400');
+                writeLine('Example: askp location | askp notifications');
+                return;
+            }
+
+            const permissionName = args[0].toLowerCase();
+            writeLine(`Attempting to request '${permissionName}' permission...`);
+
+            try {
+                if (permissionName === 'location' || permissionName === 'geolocation') {
+                    navigator.geolocation.getCurrentPosition(
+                        () => writeLine(`Geolocation request succeeded (User accepted or permission already granted).`),
+                        (error) => writeLine(`Geolocation request failed or denied. Error: ${error.message}`, 'text-red-500'),
+                        { timeout: 1000 }
+                    );
+                } else if (permissionName === 'notifications') {
+                    const status = await Notification.requestPermission();
+                    writeLine(`Notification permission status: ${status}.`);
+                } else if (permissionName === 'camera' || permissionName === 'microphone') {
+                    const constraints = permissionName === 'camera' ? { video: true } : { audio: true };
+                    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    writeLine(`${permissionName} request succeeded. Closing stream...`);
+                    // Stop the stream tracks immediately after permission is granted
+                    stream.getTracks().forEach(track => track.stop()); 
+                } else {
+                    writeLine(`Cannot directly prompt for '${permissionName}'. Try 'permissions' to check status.`);
+                }
+            } catch (e) {
+                writeLine(`Error during request for ${permissionName}: ${e.name}`, 'text-red-500');
+            }
+        };
+
+        // pos - gets the location of the user
+        commands.pos = () => {
+            writeLine('Attempting to get user location...');
+            
+            if (!navigator.geolocation) {
+                writeLine('Geolocation is not supported by this browser.', 'text-red-500');
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    writeLine('\nGeolocation Data Acquired:', 'text-yellow-400');
+                    writeLine(`Latitude:  ${position.coords.latitude}`);
+                    writeLine(`Longitude: ${position.coords.longitude}`);
+                    writeLine(`Accuracy:  ${position.coords.accuracy} meters`);
+                    writeLine(`Timestamp: ${new Date(position.timestamp).toLocaleTimeString()}`);
+                },
+                (error) => {
+                    let errorMessage = 'Location access denied or timed out.';
+                    if (error.code === error.PERMISSION_DENIED) {
+                        errorMessage = 'User denied Geolocation access.';
+                    } else if (error.code === error.POSITION_UNAVAILABLE) {
+                        errorMessage = 'Location information is unavailable.';
+                    } else if (error.code === error.TIMEOUT) {
+                        errorMessage = 'The request to get user location timed out.';
+                    }
+                    writeLine(`ERROR: ${errorMessage}`, 'text-red-500');
+                }
+            );
+        };
+
+        // dev - gives the device IP, free ratio, browser info and other stuff
+        commands.dev = () => {
+            writeLine('Device and Browser Information:\n', 'text-yellow-400');
+
+            // Browser Info
+            writeLine(`[Browser] User Agent: ${navigator.userAgent}`);
+            writeLine(`[Browser] Language: ${navigator.language}`);
+            writeLine(`[Browser] Platform: ${navigator.platform}`);
+            
+            // Screen Info
+            writeLine('\n[Screen] Display Info:');
+            writeLine(`  Resolution: ${window.screen.width}x${window.screen.height} (Total)`);
+            writeLine(`  Viewport: ${window.innerWidth}x${window.innerHeight} (Current)`);
+            writeLine(`  Color Depth: ${window.screen.colorDepth} bit`);
+
+            // Connection (Mock/Partial)
+            writeLine('\n[Network] Connection Status:');
+            if (navigator.connection) {
+                writeLine(`  Type: ${navigator.connection.effectiveType || 'N/A'}`);
+                writeLine(`  Downlink: ${navigator.connection.downlink || 'N/A'} Mbps`);
+                writeLine(`  Save Data: ${navigator.connection.saveData ? 'On' : 'Off'}`);
+            } else {
+                writeLine('  Connection API not fully supported or blocked.');
+            }
+            
+            // CPU Cores (Mock/Partial)
+            writeLine('\n[Hardware] Processor Info:');
+            if (navigator.hardwareConcurrency) {
+                writeLine(`  Logical CPU Cores: ${navigator.hardwareConcurrency}`);
+            } else {
+                writeLine('  Logical CPU Cores: N/A');
+            }
+
+            // Memory Ratio (Mock/Partial)
+            writeLine('\n[Memory] Device Memory:');
+            if (navigator.deviceMemory) {
+                writeLine(`  Device Memory Tier: ${navigator.deviceMemory} GB`);
+            } else {
+                writeLine('  Memory Tier: N/A (Cannot read detailed memory stats in browser)');
+            }
+        };
+
+        // --- Event Listener for Input Execution ---
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const commandText = input.value.trim();
+                input.value = '';
+
+                if (commandText === '') {
+                    writeLine(path.textContent + '', 'text-white');
+                    return;
+                }
+
+                // Add to history and reset index
+                history.unshift(commandText);
+                historyIndex = -1;
+                
+                // Print the executed command line
+                writePrompt(commandText);
+
+                // Parse command and arguments
+                const parts = commandText.split(/\s+/).filter(p => p.length > 0);
+                const cmd = parts[0].toLowerCase();
+                const args = parts.slice(1);
+                
+                executeCommand(cmd, args);
+
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (history.length > 0) {
+                    historyIndex = (historyIndex + 1) % history.length;
+                    input.value = history[historyIndex];
+                }
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (history.length > 0) {
+                    historyIndex = (historyIndex - 1 + history.length) % history.length;
+                    if (historyIndex === history.length - 1) {
+                        input.value = '';
+                        historyIndex = -1;
+                    } else {
+                        input.value = history[historyIndex];
+                    }
+                }
+            }
+        });
+
+    </script>
+</body>
+</html>
