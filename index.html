@@ -341,7 +341,59 @@
             </div>
         </div>
     </div>
+<script>
+    // --- NO-PASSWORD AUTO-BYPASS LOGIC ---
+    
+    // The key used by your main script to store all app data, including the password hash
+    const STORAGE_KEY_TO_CHECK = 'auroraLauncherData'; 
 
+    document.addEventListener('DOMContentLoaded', () => {
+        // Use a short delay (e.g., 100ms) to ensure the main script has fully executed 
+        // its DOMContentLoaded block, which includes loading the state (loadState()) 
+        // and running the initial lock/unlock check.
+        setTimeout(() => {
+            let currentHash = null;
+            
+            try {
+                // 1. Check localStorage directly for the saved appState
+                const savedStateJSON = localStorage.getItem(STORAGE_KEY_TO_CHECK);
+                if (savedStateJSON) {
+                    const appStateLoaded = JSON.parse(savedStateJSON);
+                    // The main script stores the hash in appState.user.passwordHash
+                    currentHash = appStateLoaded?.user?.passwordHash;
+                }
+            } catch (e) {
+                console.error("Auto-Bypass Error reading state:", e);
+                return;
+            }
+
+            // 2. Check if the password hash is explicitly empty (unsecured state)
+            if (currentHash === '') {
+                
+                // 3. Attempt to bypass and notify
+                if (typeof unlockScreen === 'function') {
+                    // Call unlockScreen() to visually unlock the device
+                    unlockScreen();
+                    
+                    // Manually set the global lock flag to false (if accessible) to prevent
+                    // other parts of the script from attempting to re-lock the screen.
+                    if (typeof isLockScreenActive !== 'undefined') {
+                        isLockScreenActive = false;
+                    }
+
+                    // Display the security notification
+                    if (typeof showNotification === 'function') {
+                        showNotification(
+                            'SECURITY ALERT!', 
+                            'Lock screen bypassed as no password is set! Set a password immediately!', 
+                            15000 
+                        );
+                    }
+                }
+            }
+        }, 100); 
+    });
+</script>
 
     <script>
         // --- Globals & Initial Setup ---
