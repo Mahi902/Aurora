@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Device Health</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Tone.js for audio generation -->
+    <script src="https://unpkg.com/tone@14.8.49/build/Tone.js"></script>
+    <style>
+        /* Custom styles for the FPS counter and meter */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8; /* Lighter background for a cleaner look */
+        }
+        /* Adjusted for a more 'computer-like' aesthetic (less round) */
+        .result-card {
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            border-radius: 0.375rem; /* rounded-md */
+        }
+        /* Status Colors */
+        .test-status-pending { background-color: #fffbe3; color: #b45309; } 
+        .test-status-success { background-color: #dcfce7; color: #166534; } 
+        .test-status-fail { background-color: #fee2e2; color: #991b1b; } 
+        .test-status-na { background-color: #e5e7eb; color: #4b5563; } 
+        .test-status-warning { background-color: #fef9c3; color: #854d0e; } /* Warning for Power Saving */
+
+
+        /* CSS for the Meter (Kept round as it's a standard gauge design) */
+        .meter {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            border: 10px solid #d1d5db;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .meter-fill {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            clip: rect(0, 150px, 150px, 75px);
+            transition: all 0.5s ease-in-out;
+        }
+        .meter-half {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            clip: rect(0, 75px, 150px, 0);
+            transform-origin: 50% 50%;
+            transition: all 0.5s ease-in-out;
+            background: linear-gradient(to right, #1d4ed8, #3b82f6);
+        }
+        .meter-value {
+            position: relative;
+            z-index: 10;
+            background-color: #f0f4f8;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-10">
+
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-900 mb-6 border-b-2 pb-2">Device Health</h1>
+        <p class="text-gray-600 mb-8">Initiate the full test suite to obtain a comprehensive report on your system's performance and capabilities.</p>
+
+        <!-- Main Dashboard Section (Less rounded container) -->
+        <div class="bg-white p-6 rounded-md shadow-lg mb-8 border border-gray-200">
+            <div class="flex flex-col md:flex-row items-center justify-between">
+                
+                <!-- Meter/Gauge Area -->
+                <div class="flex flex-col items-center mb-6 md:mb-0">
+                    <div id="statusMeter" class="meter">
+                        <div id="meterFill" class="meter-fill">
+                            <div id="meterHalf" class="meter-half"></div>
+                        </div>
+                        <div class="meter-value">
+                            <span id="meterPercentage" class="text-5xl font-bold text-blue-700">0%</span>
+                            <span class="text-sm text-gray-500 mt-1">Tests Complete</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Control Panel -->
+                <div class="md:w-1/2 flex flex-col space-y-4">
+                    <button id="runTestButton"
+                        class="w-full bg-blue-700 text-white font-semibold py-3 px-6 rounded-md hover:bg-blue-800 transition duration-300 transform shadow-md">
+                        <svg id="buttonSpinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline-block hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span id="buttonText">Run All Tests</span>
+                    </button>
+                    <div id="messageBox" class="text-sm p-3 rounded-md text-center hidden"></div>
+
+                    <!-- FPS Counter -->
+                    <div class="flex justify-center items-center p-3 bg-gray-100 rounded-sm border border-gray-300">
+                        <span class="text-sm font-medium text-gray-700 mr-2">Display FPS:</span>
+                        <span id="fpsCounter" class="text-lg font-bold text-teal-600">--</span>
+                        <span id="fpsTestStatus" class="text-xs ml-2 text-gray-400">(Running)</span>
+                    </div>
+
+                    <!-- Input Monitor -->
+                    <div class="p-3 bg-gray-100 rounded-sm border border-gray-300">
+                        <h3 class="text-sm font-medium text-gray-700 mb-1 border-b pb-1">Input Monitor</h3>
+                        <div id="inputStatus" class="flex flex-wrap gap-2 text-xs">
+                            <span id="keyStatus" class="p-1 rounded bg-gray-200">Key: None</span>
+                            <span id="mouseStatus" class="p-1 rounded bg-gray-200">Mouse: Idle</span>
+                            <span id="touchStatus" class="p-1 rounded bg-gray-200">Touches: 0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Display Area -->
+        <div id="resultsContainer" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Results will be injected here -->
+        </div>
+
+    </div>
+
+    <script>
+        // --- CONSTANTS AND GLOBALS ---
+        const $ = id => document.getElementById(id);
+        const RESULTS_CONTAINER = $('resultsContainer');
+        const MESSAGE_BOX = $('messageBox');
+        const METER_PERCENTAGE = $('meterPercentage');
+        const METER_HALF = $('meterHalf');
+        const RUN_BUTTON = $('runTestButton');
+        const BUTTON_TEXT = $('buttonText');
+        const BUTTON_SPINNER = $('buttonSpinner');
+        const FPS_COUNTER = $('fpsCounter');
+        const FPS_TEST_STATUS = $('fpsTestStatus');
+        
+        let testResults = {};
+        let totalTests = 0;
+        let completedTests = 0;
+        let isTesting = false;
+        let lastTimestamp = 0;
+        let frameCount = 0;
+        const FPS_TEST_DURATION = 5000; // 5 seconds
+        
+        // --- UTILITY FUNCTIONS ---
+
+        function showMessage(message, type = 'info') {
+            MESSAGE_BOX.textContent = message;
+            // Use blue for general info, red for errors
+            MESSAGE_BOX.className = `text-sm p-3 rounded-md text-center mt-2 ${type === 'error' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`;
+            MESSAGE_BOX.classList.remove('hidden');
+        }
+
+        function updateMeter() {
+            if (totalTests === 0) return;
+            // Ensure percentage never exceeds 100%
+            const percentage = Math.min(100, Math.floor((completedTests / totalTests) * 100));
+            METER_PERCENTAGE.textContent = `${percentage}%`;
+
+            // Update meter dial (3.6 degrees per percent)
+            const deg = percentage * 3.6; 
+            METER_HALF.style.transform = `rotate(${deg}deg)`;
+
+            // Update color to green when complete
+            if (percentage === 100) {
+                METER_PERCENTAGE.classList.remove('text-blue-700');
+                METER_PERCENTAGE.classList.add('text-green-600');
+            } else {
+                METER_PERCENTAGE.classList.add('text-blue-700');
+                METER_PERCENTAGE.classList.remove('text-green-600');
+            }
+        }
+
+        function createResultItem(category, key, title, status = 'Pending', value = 'Running test...') {
+            const id = `${key}Result`;
+            testResults[key] = { category, title, status, value, id };
+            
+            // Render card only if it doesn't exist
+            if (!$(`card-${category}`)) {
+                const cardHtml = `
+                    <div id="card-${category}" class="result-card bg-white p-6 rounded-md border-l-4 border-blue-600 shadow-md">
+                        <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">${category}</h2>
+                        <dl id="list-${category}" class="space-y-3"></dl>
+                    </div>
+                `;
+                RESULTS_CONTAINER.insertAdjacentHTML('beforeend', cardHtml);
+            }
+
+            const listItemHtml = `
+                <div id="${id}" class="flex justify-between items-start border-b border-gray-100 pb-2">
+                    <dt class="font-medium text-gray-700">${title}</dt>
+                    <dd class="text-right ml-4">
+                        <span id="${id}Status" class="inline-block px-2 py-0.5 text-xs font-semibold rounded-sm test-status-pending">${status}</span>
+                        <p id="${id}Value" class="text-sm text-gray-500">${value}</p>
+                    </dd>
+                </div>
+            `;
+            $(`list-${category}`).insertAdjacentHTML('beforeend', listItemHtml);
+            totalTests++;
+        }
+
+        function updateResult(key, status, value) {
+            const result = testResults[key];
+            if (!result) {
+                console.error(`Attempted to update non-existent test key: ${key}`);
+                return;
+            }
+
+            const statusElement = $(`${result.id}Status`);
+            const valueElement = $(`${result.id}Value`);
+
+            if (!statusElement || !valueElement) return;
+
+            // CRITICAL METER FIX: Increment completed tests ONLY if the status was previously 'Pending'
+            if (result.status === 'Pending') {
+                completedTests++;
+                updateMeter();
+            }
+
+            // Update status class (ensuring we handle 'Warning' status)
+            statusElement.className = `inline-block px-2 py-0.5 text-xs font-semibold rounded-sm transition duration-150 ease-in-out test-status-${status.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+            statusElement.textContent = status;
+            valueElement.innerHTML = value;
+
+            result.status = status;
+            result.value = value;
+        }
+
+        // --- CORE DEVICE TESTS ---
+
+        function testDeviceInfo() {
+            // 1. Device Type, OS, Browser
+            const ua = navigator.userAgent;
+            let deviceType = 'Desktop';
+            if (/Mobi|Android/i.test(ua)) {
+                deviceType = 'Mobile';
+            } else if (/Tablet|iPad/i.test(ua)) {
+                deviceType = 'Tablet';
+            }
+            updateResult('deviceType', 'Success', deviceType);
+            updateResult('osBrowser', 'Success', `OS: ${navigator.platform} | Browser: ${navigator.appCodeName} ${navigator.appVersion}`);
+
+            // 2. Screen Info
+            const screenInfo = `${window.screen.width}x${window.screen.height} (Physical) / ${window.innerWidth}x${window.innerHeight} (Viewport)`;
+            updateResult('screenResolution', 'Success', screenInfo);
+            updateResult('pixelDensity', 'Success', `${window.devicePixelRatio.toFixed(2)}x DPI`);
+            updateResult('colorDepth', 'Success', `${window.screen.colorDepth} bit`);
+
+            // 3. System Info
+            const ram = navigator.deviceMemory ? `${navigator.deviceMemory} GB` : 'N/A';
+            const cores = navigator.hardwareConcurrency || 'N/A';
+            updateResult('deviceMemory', ram !== 'N/A' ? 'Success' : 'N/A', ram);
+            updateResult('cpuCores', cores !== 'N/A' ? 'Success' : 'N/A', `${cores} Cores`);
+        }
+
+        async function testBatteryStatus() {
+            if (!('getBattery' in navigator)) {
+                updateResult('batteryStatus', 'N/A', 'Battery Status API not supported.');
+                updateResult('powerSaving', 'N/A', 'N/A');
+                return;
+            }
+
+            try {
+                const battery = await navigator.getBattery();
+                const chargeStatus = battery.charging ? 'Charging' : 'Discharging';
+                const level = (battery.level * 100).toFixed(0);
+
+                updateResult('batteryStatus', 'Success', `${level}% (${chargeStatus})`);
+
+                // Power-saving mode estimation: if not charging AND low battery (<= 20%)
+                if (battery.charging === false && level <= 20) {
+                    updateResult('powerSaving', 'Warning', `Battery at ${level}%. Power saving is likely active.`);
+                } else {
+                    updateResult('powerSaving', 'Info', 'Direct detection unavailable. System appears normal.');
+                }
+
+                // Add listeners to keep battery info updated live
+                battery.addEventListener('chargingchange', () => updateResult('batteryStatus', 'Success', `${(battery.level * 100).toFixed(0)}% (${battery.charging ? 'Charging' : 'Discharging'})`));
+                battery.addEventListener('levelchange', () => updateResult('batteryStatus', 'Success', `${(battery.level * 100).toFixed(0)}% (${battery.charging ? 'Charging' : 'Discharging'})`));
+
+            } catch (error) {
+                updateResult('batteryStatus', 'Fail', `Access Denied: ${error.message}`);
+                updateResult('powerSaving', 'Fail', 'Access Error');
+            }
+        }
+        
+        // --- PERFORMANCE AND NETWORK TESTS ---
+        
+        function testFPS() {
+            let running = true;
+            let startTime = performance.now();
+            
+            const animate = (timestamp) => {
+                if (!running) return;
+
+                if (timestamp < startTime + FPS_TEST_DURATION) {
+                    frameCount++;
+                    requestAnimationFrame(animate);
+                } else {
+                    running = false;
+                    const durationSeconds = (timestamp - startTime) / 1000;
+                    const fps = Math.round(frameCount / durationSeconds);
+                    updateResult('frameRate', 'Success', `${fps} FPS`);
+                    
+                    FPS_TEST_STATUS.textContent = '(Complete)';
+                    FPS_TEST_STATUS.classList.replace('text-gray-400', 'text-green-600');
+                    FPS_COUNTER.textContent = `${fps}`;
+                }
+            };
+            
+            updateResult('frameRate', 'Pending', 'Measuring for 5 seconds...');
+            FPS_TEST_STATUS.textContent = '(Running)';
+            FPS_TEST_STATUS.classList.replace('text-green-600', 'text-gray-400');
+            lastTimestamp = performance.now();
+            frameCount = 0;
+            requestAnimationFrame(animate);
+        }
+
+        async function testNetwork() {
+            // 1. Online/Offline
+            updateResult('onlineStatus', navigator.onLine ? 'Success' : 'Fail', navigator.onLine ? 'Online' : 'Offline');
+
+            // 2. Connection Type
+            const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+            if (connection) {
+                const type = connection.effectiveType || connection.type;
+                const rtt = connection.rtt !== undefined ? `${connection.rtt}ms RTT` : 'N/A RTT';
+                updateResult('connectionType', 'Success', `${type.toUpperCase()} (${rtt})`);
+            } else {
+                updateResult('connectionType', 'N/A', 'Network Information API not supported.');
+            }
+            
+            // 3. Upload Speed Test (Client-side upload speed test without a dedicated server is unreliable)
+            updateResult('uploadSpeed', 'N/A', 'Info not available.');
+        }
+
+        async function testLatencyAndDownloadSpeed() {
+            // URL pointing to a large, non-cacheable file for reliable measurement (~1MB)
+            const TEST_URL = 'https://placehold.co/1000x1000/000000/FFFFFF/png?' + new Date().getTime(); 
+
+            updateResult('latencyPing', 'Pending', 'Pinging and connecting...');
+            updateResult('downloadSpeed', 'Pending', 'Testing download speed...');
+
+            let latencyStatus = 'Fail';
+            let speedStatus = 'Fail';
+            let latencyValue = 'Request failed or timed out.';
+            let speedValue = 'Failed to measure.';
+
+            const start = performance.now();
+
+            try {
+                // Check connectivity via Fast.com API first (as requested by user)
+                await fetch('https://api.fast.com/netflix/speedtest').then(res => res.json()).then(data => {
+                    console.log("Fast.com API response received (used for connectivity check):", data);
+                }).catch(e => {
+                    console.warn("Fast.com API check failed (likely CORS/network restriction), proceeding with controlled download test.");
+                });
+                
+                // --- ACTUAL DOWNLOAD TEST ---
+                const response = await fetch(TEST_URL);
+                const endPing = performance.now();
+                
+                // 1. Latency Test (Time to first byte)
+                const latency = (endPing - start).toFixed(2);
+                latencyStatus = 'Success';
+                latencyValue = `${latency} ms`;
+                
+                // 2. Download Speed Test - Measure actual data transfer rate
+                const reader = response.body.getReader();
+                let receivedLength = 0;
+                const transferStart = performance.now();
+                
+                // Read the entire stream
+                while(true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    receivedLength += value.length;
+                }
+
+                const transferEnd = performance.now();
+                const durationSeconds = (transferEnd - transferStart) / 1000;
+                
+                if (receivedLength > 0 && durationSeconds > 0) {
+                    // Convert bytes to Megabits (Mbps) (1 byte = 8 bits)
+                    const bits = receivedLength * 8;
+                    const speedMbps = (bits / durationSeconds) / (1024 * 1024);
+                    speedStatus = 'Success';
+                    speedValue = `${speedMbps.toFixed(2)} Mbps`;
+                } else {
+                    speedValue = 'Transfer size or duration was zero.';
+                }
+                
+            } catch (e) {
+                console.error("Network test error:", e);
+                // Errors handled by initial status
+            } finally {
+                updateResult('latencyPing', latencyStatus, latencyValue);
+                updateResult('downloadSpeed', speedStatus, speedValue);
+            }
+        }
+
+        // --- MEDIA & SENSOR TESTS ---
+
+        async function testMediaAccess(key, type, permissionName) {
+            updateResult(key, 'Pending', 'Checking permissions...');
+            const constraints = type === 'video' ? { video: true } : { audio: true };
+            const permissionKey = permissionName || key;
+
+            try {
+                // 1. Check if permission is already granted/denied
+                const queryResult = await navigator.permissions.query({ name: permissionKey }).catch(() => ({ state: 'prompt' }));
+                
+                if (queryResult.state === 'granted') {
+                    updateResult(key, 'Success', `${type} access granted (pre-approved)`);
+                } else if (queryResult.state === 'denied') {
+                    updateResult(key, 'Fail', `${type} access denied by user/system.`);
+                    return;
+                }
+
+                // 2. Try to access device to force prompt and check device count
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                
+                // If successful, stop stream immediately
+                stream.getTracks().forEach(track => track.stop());
+
+                updateResult(key, 'Success', `${type} access granted and device detected.`);
+
+            } catch (err) {
+                let message = 'Permission Prompt Blocked/Rejected';
+                if (err.name === 'NotAllowedError') {
+                    message = 'User/System denied access.';
+                } else if (err.name === 'NotFoundError') {
+                    message = `No ${type} devices found.`;
+                } else if (err.name === 'NotReadableError') {
+                    message = `${type} hardware error/in use.`;
+                } else {
+                    message = `Error: ${err.message}`;
+                }
+                updateResult(key, 'Fail', message);
+            }
+        }
+
+        async function testCameraCount() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+                updateResult('cameraCount', 'N/A', 'Media Device Enumeration API not supported.');
+                return;
+            }
+
+            updateResult('cameraCount', 'Pending', 'Counting devices...');
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const videoInputs = devices.filter(d => d.kind === 'videoinput');
+                const count = videoInputs.length;
+                updateResult('cameraCount', count > 0 ? 'Success' : 'Fail', `${count} camera(s) found.`);
+            } catch (err) {
+                updateResult('cameraCount', 'Fail', `Error counting devices: ${err.message}`);
+            }
+        }
+        
+        function testGeolocation() {
+            updateResult('geolocationTest', 'Pending', 'Requesting location permission...');
+
+            if (!('geolocation' in navigator)) {
+                updateResult('geolocationTest', 'N/A', 'Geolocation API not supported.');
+                return;
+            }
+
+            // Options for high accuracy and timeout
+            const options = {
+                enableHighAccuracy: true,
+                timeout: 5000,
+                maximumAge: 0
+            };
+
+            const success = (pos) => {
+                const coords = pos.coords;
+                const lat = coords.latitude.toFixed(4);
+                const lon = coords.longitude.toFixed(4);
+                const accuracy = coords.accuracy.toFixed(0);
+                updateResult('geolocationTest', 'Success', `Lat: ${lat}, Lon: ${lon} (Accuracy: ${accuracy}m)`);
+            };
+
+            const error = (err) => {
+                let message = 'Permission denied or timed out.';
+                if (err.code === err.PERMISSION_DENIED) {
+                    message = 'Permission Denied by user.';
+                } else if (err.code === err.POSITION_UNAVAILABLE) {
+                    message = 'Position information unavailable.';
+                } else if (err.code === err.TIMEOUT) {
+                    message = 'Request timed out.';
+                }
+                updateResult('geolocationTest', 'Fail', message);
+            };
+
+            navigator.geolocation.getCurrentPosition(success, error, options);
+        }
+        
+        // --- INTERACTIVE TESTS ---
+
+        async function startToneTest(button) {
+            button.disabled = true;
+            button.textContent = 'Playing...';
+            try {
+                // Create a simple synth (oscillator)
+                const synth = new Tone.Oscillator(440, "sine").toDestination();
+                
+                // Start the audio context (required in most browsers after user gesture)
+                await Tone.start();
+                
+                // Play for 0.5 seconds
+                synth.start().stop("+0.5");
+                updateResult('speakerTest', 'Success', 'Tone played (440Hz). <span class="text-xs text-gray-400">Please confirm you heard the sound.</span>');
+            } catch (e) {
+                updateResult('speakerTest', 'Fail', `Audio error: ${e.message}. Ensure sound is unmuted.`);
+            }
+        }
+
+        async function testSpeakerTone() {
+            // Status remains 'Pending' until the user interacts with the button
+            updateResult('speakerTest', 'Pending', '<button class="text-sm bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1 px-3 rounded-sm transition duration-150" onclick="startToneTest(this)">Activate Tone Test</button>');
+        }
+
+        async function startFullscreenTest(button) {
+            button.disabled = true;
+            button.textContent = 'Activating...';
+            try {
+                await document.documentElement.requestFullscreen();
+                updateResult('fullscreenTest', 'Success', 'Fullscreen mode activated. Press ESC to exit.');
+
+                document.addEventListener('fullscreenchange', () => {
+                    if (!document.fullscreenElement) {
+                        // Re-enable test after exit
+                        updateResult('fullscreenTest', 'Success', '<button class="text-sm bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1 px-3 rounded-sm transition duration-150" onclick="startFullscreenTest(this)">Activate Fullscreen</button>');
+                    }
+                }, { once: true });
+
+            } catch (e) {
+                updateResult('fullscreenTest', 'Fail', `Fullscreen blocked or failed: ${e.message}`);
+            }
+        }
+        
+        function testFullscreen() {
+             if (document.fullscreenEnabled) {
+                // Status remains 'Pending' until the user interacts with the button
+                updateResult('fullscreenTest', 'Pending', '<button class="text-sm bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1 px-3 rounded-sm transition duration-150" onclick="startFullscreenTest(this)">Activate Fullscreen</button>');
+            } else {
+                updateResult('fullscreenTest', 'N/A', 'Fullscreen API not supported by browser/device.');
+            }
+        }
+
+        // --- SENSOR TESTS ---
+
+        function testMotionSensor() {
+            updateResult('motionSensor', 'Pending', 'Awaiting motion data... Tilt your device.');
+            
+            if (!window.DeviceMotionEvent) {
+                updateResult('motionSensor', 'N/A', 'Device Motion API not supported.');
+                return;
+            }
+            
+            const motionTimeout = setTimeout(() => {
+                // Check if the status is still 'Pending' after timeout
+                if (testResults.motionSensor.status === 'Pending') {
+                    updateResult('motionSensor', 'Fail', 'No data received after 3s. Sensor blocked or inactive.');
+                }
+            }, 3000);
+
+            const handleMotion = (event) => {
+                clearTimeout(motionTimeout);
+                let acceleration = 
+                    event.accelerationIncludingGravity ? 
+                    `X:${event.accelerationIncludingGravity.x?.toFixed(1)}, Y:${event.accelerationIncludingGravity.y?.toFixed(1)}` : 
+                    'Available';
+
+                updateResult('motionSensor', 'Success', `Data received. Accel (g): ${acceleration}`);
+                window.removeEventListener('devicemotion', handleMotion);
+            };
+
+            window.addEventListener('devicemotion', handleMotion);
+        }
+
+        function testAmbientLight() {
+            if ('AmbientLightSensor' in window) {
+                try {
+                    const sensor = new AmbientLightSensor();
+                    sensor.onreading = () => {
+                        updateResult('ambientLight', 'Success', `${sensor.illuminance} lux`);
+                        sensor.stop();
+                    };
+                    sensor.onerror = (event) => {
+                        updateResult('ambientLight', 'Fail', `Sensor Error: ${event.error.message}.`);
+                    };
+                    sensor.start();
+                    updateResult('ambientLight', 'Pending', 'Waiting for reading...');
+                } catch (e) {
+                    updateResult('ambientLight', 'N/A', `API supported but failed to initialize: ${e.message}`);
+                }
+            } else {
+                updateResult('ambientLight', 'N/A', 'Ambient Light Sensor API not supported or requires specific permission.');
+            }
+        }
+        
+        // --- STORAGE & INPUT TESTS ---
+
+        async function testStorage() {
+            if (!('storage' in navigator) || !navigator.storage.estimate) {
+                updateResult('storageQuota', 'N/A', 'Storage Estimate API not supported.');
+                updateResult('persistentStorage', 'N/A', 'N/A');
+                return;
+            }
+
+            try {
+                const estimate = await navigator.storage.estimate();
+                const quotaMB = (estimate.quota / (1024 * 1024)).toFixed(0);
+                const usageMB = (estimate.usage / (1024 * 1024)).toFixed(2);
+                updateResult('storageQuota', 'Success', `Used: ${usageMB} MB / Quota: ${quotaMB} MB`);
+            } catch (e) {
+                updateResult('storageQuota', 'Fail', `Error estimating storage: ${e.message}`);
+            }
+
+            // Test Persistent Storage Request
+            try {
+                const isPersistent = await navigator.storage.persisted();
+                if (isPersistent) {
+                    updateResult('persistentStorage', 'Success', 'Storage is already persistent.');
+                } else {
+                    const persistentStatus = await navigator.storage.persist();
+                    updateResult('persistentStorage', persistentStatus ? 'Success' : 'Info', persistentStatus ? 'Requested persistence.' : 'Persistence request denied or not needed.');
+                }
+            } catch (e) {
+                 updateResult('persistentStorage', 'Fail', `Error requesting persistence: ${e.message}`);
+            }
+        }
+        
+        function testLocalData() {
+            // Cookie test
+            document.cookie = "testCookie=true; max-age=60";
+            const cookieStatus = document.cookie.includes("testCookie=true") ? 'Success' : 'Fail';
+            updateResult('cookieTest', cookieStatus, `Cookie Write/Read: ${cookieStatus === 'Success' ? 'Enabled' : 'Disabled'}`);
+
+            // LocalStorage test
+            try {
+                localStorage.setItem('testKey', 'testValue');
+                const lsStatus = localStorage.getItem('testKey') === 'testValue' ? 'Success' : 'Fail';
+                localStorage.removeItem('testKey');
+                updateResult('localStorageTest', lsStatus, `LocalStorage: ${lsStatus === 'Success' ? 'Enabled' : 'Disabled'}`);
+            } catch (e) {
+                updateResult('localStorageTest', 'Fail', `LocalStorage: Disabled/Error (${e.name})`);
+            }
+        }
+
+        function testVibration() {
+            if (!('vibrate' in navigator)) {
+                updateResult('vibrationTest', 'N/A', 'Vibration API not supported.');
+                return;
+            }
+            // Vibrate for 200ms
+            const success = navigator.vibrate(200);
+            updateResult('vibrationTest', success ? 'Success' : 'Fail', success ? 'Vibration triggered (200ms).' : 'Vibration failed or blocked.');
+        }
+
+        
+        // --- INPUT MONITOR LISTENERS ---
+
+        function setupInputListeners() {
+            // Keyboard
+            document.addEventListener('keydown', (e) => {
+                $('keyStatus').textContent = `Key: ${e.key} (${e.code})`;
+                $('keyStatus').classList.remove('bg-gray-200');
+                $('keyStatus').classList.add('bg-blue-200');
+            });
+
+            // Mouse
+            document.addEventListener('mousemove', () => {
+                $('mouseStatus').textContent = 'Mouse: Moving';
+                $('mouseStatus').classList.remove('bg-gray-200');
+                $('mouseStatus').classList.add('bg-blue-200');
+            }, { once: true });
+            document.addEventListener('click', () => {
+                $('mouseStatus').textContent = 'Mouse: Clicked';
+                $('mouseStatus').classList.remove('bg-gray-200');
+                $('mouseStatus').classList.add('bg-blue-200');
+            });
+
+            // Touch / Multi-touch
+            document.addEventListener('touchstart', (e) => {
+                const count = e.touches.length;
+                $('touchStatus').textContent = `Touches: ${count}${count > 1 ? ' (Multi-Touch)' : ''}`;
+                $('touchStatus').classList.remove('bg-gray-200');
+                $('touchStatus').classList.add(count > 1 ? 'bg-indigo-200' : 'bg-blue-200');
+            });
+            document.addEventListener('touchend', (e) => {
+                $('touchStatus').textContent = `Touches: ${e.touches.length}`;
+            });
+        }
+        
+        // --- MAIN ORCHESTRATOR ---
+
+        function setupTestItems() {
+            // Clear previous results
+            RESULTS_CONTAINER.innerHTML = '';
+            testResults = {};
+            totalTests = 0;
+            completedTests = 0;
+            MESSAGE_BOX.classList.add('hidden');
+            METER_PERCENTAGE.classList.remove('text-green-600');
+            METER_PERCENTAGE.classList.add('text-blue-700');
+            METER_PERCENTAGE.textContent = '0%';
+            METER_HALF.style.transform = `rotate(0deg)`;
+
+
+            // Device Info & Power
+            createResultItem('Device Info & Power', 'deviceType', 'Device Type');
+            createResultItem('Device Info & Power', 'osBrowser', 'OS & Browser');
+            createResultItem('Device Info & Power', 'batteryStatus', 'Battery % & Charging');
+            createResultItem('Device Info & Power', 'powerSaving', 'Power Saving Mode');
+            createResultItem('Device Info & Power', 'deviceMemory', 'Device RAM (Approx)');
+            createResultItem('Device Info & Power', 'cpuCores', 'CPU Cores');
+            
+            // Screen & Display
+            createResultItem('Screen & Display', 'screenResolution', 'Screen Size & Viewport');
+            createResultItem('Screen & Display', 'pixelDensity', 'Pixel Density (DPR)');
+            createResultItem('Screen & Display', 'colorDepth', 'Color Depth');
+            createResultItem('Screen & Display', 'frameRate', 'Frame Rate (FPS)');
+            createResultItem('Screen & Display', 'fullscreenTest', 'Fullscreen Capability');
+
+            // Network & Performance
+            createResultItem('Network & Performance', 'onlineStatus', 'Online Status');
+            createResultItem('Network & Performance', 'connectionType', 'Connection Type & RTT');
+            createResultItem('Network & Performance', 'latencyPing', 'Latency (Ping)');
+            createResultItem('Network & Performance', 'downloadSpeed', 'Download Speed');
+            createResultItem('Network & Performance', 'uploadSpeed', 'Upload Speed');
+
+            // Media & Sensors
+            createResultItem('Media & Sensors', 'micAccess', 'Microphone Access');
+            createResultItem('Media & Sensors', 'cameraAccess', 'Camera Access');
+            createResultItem('Media & Sensors', 'cameraCount', 'Camera Count');
+            createResultItem('Media & Sensors', 'speakerTest', 'Speaker Test (Tone)');
+            createResultItem('Media & Sensors', 'geolocationTest', 'Geolocation (GPS)');
+            createResultItem('Media & Sensors', 'motionSensor', 'Motion Sensor (Accel/Gyro)');
+            createResultItem('Media & Sensors', 'ambientLight', 'Ambient Light Sensor');
+            createResultItem('Media & Sensors', 'vibrationTest', 'Vibration (Haptics)');
+
+            // Storage & System
+            createResultItem('Storage & System', 'storageQuota', 'Storage Quota/Usage');
+            createResultItem('Storage & System', 'persistentStorage', 'Persistent Storage');
+            createResultItem('Storage & System', 'cookieTest', 'Cookie Read/Write');
+            createResultItem('Storage & System', 'localStorageTest', 'LocalStorage R/W');
+            
+        }
+
+        async function runAllTests() {
+            if (isTesting) return;
+            isTesting = true;
+            BUTTON_TEXT.textContent = 'Running Tests...';
+            RUN_BUTTON.disabled = true;
+            BUTTON_SPINNER.classList.remove('hidden');
+
+            setupTestItems(); // This resets all counters and UI elements.
+
+            // Run all tests concurrently where possible
+            const testPromises = [
+                testDeviceInfo(),
+                testBatteryStatus(),
+                testNetwork(),
+                testStorage(),
+                testLocalData(),
+                testVibration(),
+                testCameraCount(),
+                testMediaAccess('micAccess', 'audio', 'microphone'),
+                testMediaAccess('cameraAccess', 'video', 'camera'),
+                testLatencyAndDownloadSpeed(),
+                testGeolocation(),
+            ];
+
+            // Run serial/interactive tests (these start immediately but require user input or time)
+            testSpeakerTone();
+            testFullscreen();
+            testMotionSensor();
+            testAmbientLight();
+            testFPS(); // Start FPS test
+
+            await Promise.all(testPromises);
+
+            isTesting = false;
+            BUTTON_TEXT.textContent = 'Run All Tests (Rerun)';
+            RUN_BUTTON.disabled = false;
+            BUTTON_SPINNER.classList.add('hidden');
+            showMessage(`All ${totalTests} tests complete. Check the detailed report below.`, 'info');
+        }
+
+        // --- INITIALIZATION ---
+
+        window.onload = () => {
+            setupInputListeners();
+            // Initial setup of result cards
+            setupTestItems();
+            
+            // Set initial state for input monitors
+            $('keyStatus').textContent = 'Key: Press a key';
+            $('mouseStatus').textContent = 'Mouse: Click or Move';
+
+            // Show instruction
+            showMessage("Ready to start testing. Click 'Run All Tests'.", 'info');
+            
+            // Attach main listener
+            RUN_BUTTON.addEventListener('click', runAllTests);
+
+            // Re-run the speaker and fullscreen tests if they were interactive
+            // (Note: speaker/fullscreen rely on user interaction after the main run,
+            // they will show 'Pending' with a button initially)
+        };
+    </script>
+</body>
+</html>
